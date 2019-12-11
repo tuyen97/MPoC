@@ -46,5 +46,11 @@ func TestBlockChain_GetBlock(t *testing.T) {
 		}
 		fmt.Println(block.Timestamp)
 	}
+}
+
+func TestBlockChain_AddBlock(t *testing.T) {
+
+}
+func TestBlockChain_FindUTXO(t *testing.T) {
 
 }

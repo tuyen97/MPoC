@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"github.com/boltdb/bolt"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +15,6 @@ var dbFile = "blockchain.db"
 var bc *BlockChain = nil
 
 const blocksBucket = "blocks"
-const utxoBucket = "utxo"
 const stakeBucket = "stake"
 
 type BlockChain struct {
@@ -103,6 +103,50 @@ func (bc *BlockChain) AddBlock(block *Block) bool {
 	})
 
 	return true
+}
+func (bc *BlockChain) FindUTXO() map[string]TXOutputs {
+	//txid=>array(txoutput)
+	UTXO := make(map[string]TXOutputs)
+	spentTXOs := make(map[string][]int)
+
+	bci := bc.Iterator()
+
+	for {
+		block := bci.Next()
+
+		for _, tx := range block.Txs {
+			txID := hex.EncodeToString(tx.ID)
+
+		Outputs:
+			for outIdx, out := range tx.Output {
+				// Was the output spent?
+				if spentTXOs[txID] != nil {
+					for _, spentOutIdx := range spentTXOs[txID] {
+						if spentOutIdx == outIdx {
+							continue Outputs
+						}
+					}
+				}
+
+				outs := UTXO[txID]
+				outs.Outputs = append(outs.Outputs, out)
+				UTXO[txID] = outs
+			}
+
+			if tx.IsCoinBase() == false {
+				for _, in := range tx.Input {
+					inTxID := hex.EncodeToString(in.TXID)
+					spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
+				}
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+
+	return UTXO
 }
 
 func (bc *BlockChain) GetBlock(hash []byte) (*Block, bool) {
