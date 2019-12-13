@@ -51,3 +51,9 @@ func TestIndex_Update(t *testing.T) {
 		t.Error("Vote failed")
 	}
 }
+
+func TestIndex_GetTopKVote(t *testing.T) {
+	idx := GetOrInitIndex()
+	topk := idx.GetTopKVote(2)
+	fmt.Println(topk)
+}

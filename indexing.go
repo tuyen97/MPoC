@@ -181,6 +181,38 @@ func (i *Index) GetTotalVote(addr string) int {
 	return totalVote
 }
 
+func (i *Index) GetTopKVote(k int) []string {
+	sql := "select address,sum(amount) as total from Vote group by address order by total desc"
+	stmt, _ := i.Conn.Prepare(sql)
+	_ = stmt.Exec()
+	count := 0
+	topK := []string{}
+	for {
+		hasRow, err := stmt.Step()
+		if err != nil {
+			break
+		}
+		if !hasRow {
+			// The query is finished
+			break
+		}
+
+		// Use Scan to access column data from a row
+		var address string
+		var total int
+		err = stmt.Scan(&address, &total)
+		topK = append(topK, address)
+		if err != nil {
+			break
+		}
+		count++
+		if count == k {
+			break
+		}
+	}
+	return topK
+}
+
 func GetOrInitIndex() *Index {
 	if idx == nil {
 		//conn, err := sqlite3.Open(sqliteFile)
