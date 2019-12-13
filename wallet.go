@@ -35,3 +35,14 @@ func (wallet Wallet) GetAddress() []byte {
 	address := Base58Encode(fullPayload)
 	return address
 }
+
+func GetAddress(pubkey []byte) []byte {
+	pubKeyHash := HashPubKey(pubkey)
+
+	versionedPayload := append([]byte{version}, pubKeyHash...)
+	checksum := checksum(versionedPayload)
+	fullPayload := append(versionedPayload, checksum...)
+
+	address := Base58Encode(fullPayload)
+	return address
+}
