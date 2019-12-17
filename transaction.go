@@ -13,7 +13,6 @@ import (
 )
 
 type Transaction struct {
-	//Receiver string
 	ID          []byte   // sha256 hash
 	Signature   []byte   //ECDSA signature with secp256k1
 	Sender      []byte   // sender public key
@@ -21,6 +20,7 @@ type Transaction struct {
 	StakeAmount int      // use for staking
 	Candidate   []string // list of candidate address, use for voting
 	Data        string   // use for normal tx
+	Timestamp   int64
 }
 
 //SetId set id

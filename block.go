@@ -17,13 +17,18 @@ type Block struct {
 	Timestamp int64
 	Creator   []byte
 	Txs       []Transaction
+	BPs       []string
 }
 
 //SetHash : set block hash
 func (b *Block) SetHash() {
 	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
 	index := []byte(strconv.Itoa(b.Index))
-	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, []byte(b.Creator)}, []byte{})
+	bps := []byte{}
+	for _, bp := range b.BPs {
+		bps = bytes.Join([][]byte{[]byte(bp)}, []byte{})
+	}
+	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, b.Creator, bps}, []byte{})
 	hash := sha256.Sum256(headers)
 	b.Hash = hash[:]
 }
@@ -31,7 +36,11 @@ func (b *Block) SetHash() {
 func (b *Block) Sign() []byte {
 	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
 	index := []byte(strconv.Itoa(b.Index))
-	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, b.Creator}, []byte{})
+	bps := []byte{}
+	for _, bp := range b.BPs {
+		bps = bytes.Join([][]byte{[]byte(bp)}, []byte{})
+	}
+	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, b.Creator, bps}, []byte{})
 	hash := sha256.Sum256(headers)
 	return hash[:]
 }

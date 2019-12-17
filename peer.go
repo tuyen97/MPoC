@@ -15,8 +15,10 @@ import (
 var logger = log.Logger("peer")
 
 type Peer struct {
-	MemPeerTxChan chan *TransactionWrapper // mem -> peer :broadcast
-	PeerMemTxChan chan *TransactionWrapper //peer -> mem: receive from broadcast
+	MemPeerTxChan   chan *TransactionWrapper // mem -> peer :broadcast
+	PeerMemTxChan   chan *TransactionWrapper //peer -> mem: receive from broadcast
+	PeerBFBlockChan chan *Block              // peer -> bf: receive from broadcast
+	BFPeerBlockChan chan *Block              // bf -> peer: block
 }
 
 type DiscoveryNotifiee struct {
@@ -31,6 +33,12 @@ func (p *Peer) broadcastTx(pub *pubsub.Topic, ctx context.Context, tx Transactio
 	err := pub.Publish(ctx, tx.Serialize())
 	if err != nil {
 		logger.Error("Cannot broadcast tx")
+	}
+}
+func (p *Peer) broadcastBlock(pub *pubsub.Topic, ctx context.Context, block *Block) {
+	err := pub.Publish(ctx, block.Serialize())
+	if err != nil {
+		logger.Error("Cannot broadcast Block")
 	}
 }
 
@@ -71,6 +79,19 @@ func (p *Peer) handleIncomingTx(sub *pubsub.Subscription, ctx context.Context) {
 
 }
 
+func (p *Peer) handleIncomingBlock(sub *pubsub.Subscription, ctx context.Context) {
+	for {
+		msg, err := sub.Next(ctx)
+		if err != nil {
+			//fmt.Println("Error (sub.Next): %v", err)
+			panic(err)
+		}
+		block := DeserializeBlock(msg.GetData())
+		logger.Info("Receive tx")
+		p.BFPeerBlockChan <- block
+	}
+}
+
 func (p *Peer) Start(port string) {
 	//log.SetAllLoggers(logging.WARNING)
 	log.SetLogLevel("peer", "info")
@@ -107,6 +128,7 @@ func (p *Peer) Start(port string) {
 	//register topics
 	RegisterTopic(pubsub, ctx, "genesis", handleGenesis)
 	txTopic := RegisterTopic(pubsub, ctx, "tx", p.handleIncomingTx)
+	RegisterTopic(pubsub, ctx, "block", p.handleIncomingBlock)
 
 	//serve other component in node
 	p.ServeInternal(txTopic, ctx)
@@ -121,6 +143,9 @@ func (p *Peer) ServeInternal(pub *pubsub.Topic, ctx context.Context) {
 			case tx := <-p.MemPeerTxChan:
 				logger.Info("Broadcast tx")
 				p.broadcastTx(pub, ctx, *tx)
+			case block := <-p.BFPeerBlockChan:
+				logger.Info("Broadcast block")
+				p.broadcastBlock(pub, ctx, block)
 			}
 		}
 	}()

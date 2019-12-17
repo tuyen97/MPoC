@@ -28,18 +28,22 @@ func main() {
 	api := Api{memTxChan: apiMemTxChan}
 	api.Start(os.Args[2])
 
+	txPool := make(map[string]*TransactionWrapper)
 	bfMemChan := make(chan bool)
-	memBfChan := make(chan []*TransactionWrapper)
+	memBfChan := make(chan map[string]*TransactionWrapper)
+	returnMemBFChan := make(chan map[string]*TransactionWrapper)
 	mem := MemPool{
-		ApiMemTxChan:  apiMemTxChan,
-		MemPeerTxChan: memPeerTxChan,
-		PeerMemTx:     peerMemTxChan,
-		BFMemChan:     bfMemChan,
-		MemBFChan:     memBfChan,
+		TXPool:          txPool,
+		ApiMemTxChan:    apiMemTxChan,
+		MemPeerTxChan:   memPeerTxChan,
+		PeerMemTx:       peerMemTxChan,
+		BFMemChan:       bfMemChan,
+		MemBFChan:       memBfChan,
+		ReturnMemBFChan: returnMemBFChan,
 	}
 	go mem.Start()
 
-	bf := BlockFactory{BFMemChan: bfMemChan, MemBFChan: memBfChan}
+	bf := BlockFactory{ReturnBFMemChan: returnMemBFChan, BFMemChan: bfMemChan, MemBFChan: memBfChan, Address: os.Args[3]}
 	go bf.Start()
 	nodeLogger.Info("Node started")
 	select {}

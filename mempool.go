@@ -5,13 +5,14 @@ import (
 )
 
 type MemPool struct {
-	ApiMemTxChan  chan *TransactionWrapper   // api -> mem: transaction receive from api
-	MemPeerTxChan chan *TransactionWrapper   // mem -> peer: broadcast
-	PeerMemTx     chan *TransactionWrapper   // peer -> mem: tx received
-	BFMemChan     chan bool                  //BlockFactory -> mem : notify chan
-	MemBFChan     chan []*TransactionWrapper //mem -> BlockFactory: tx to forge block
-	IncomingBlock chan *Block                //block receive from
-	TXPool        []*TransactionWrapper
+	ApiMemTxChan    chan *Transaction            // api -> mem: transaction receive from api
+	MemPeerTxChan   chan *Transaction            // mem -> peer: broadcast
+	PeerMemTx       chan *Transaction            // peer -> mem: tx received
+	BFMemChan       chan bool                    //BlockFactory -> mem : notify chan
+	MemBFChan       chan map[string]*Transaction //mem -> BlockFactory: tx to forge block
+	ReturnMemBFChan chan map[string]*Transaction //bf->mem : delete tx that is added in block
+	IncomingBlock   chan *Block                  //block receive from
+	TXPool          map[string]*Transaction
 }
 
 var mempool *MemPool = nil
@@ -33,15 +34,21 @@ func (m *MemPool) Start() {
 	for {
 		select {
 		case tx := <-m.ApiMemTxChan:
-			memLogger.Info("receive from api")
+			//memLogger.Info("receive from api")
 			m.MemPeerTxChan <- tx
-			m.TXPool = append(m.TXPool, tx)
+			m.TXPool[string(tx.ID)] = tx
 		case tx := <-m.PeerMemTx:
-			memLogger.Info("receive from peer")
-			m.TXPool = append(m.TXPool, tx)
+			//memLogger.Info("receive from peer")
+			m.TXPool[string(tx.ID)] = tx
 		case <-m.BFMemChan:
-			memLogger.Info("Receive signal from bf")
+			//memLogger.Info("Receive signal from bf")
 			m.MemBFChan <- m.TXPool
+		case txs := <-m.ReturnMemBFChan:
+			//memLogger.Info("Receive tx from bf")
+			for key, _ := range txs {
+				delete(m.TXPool, key)
+			}
+
 		}
 	}
 }

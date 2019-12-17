@@ -12,7 +12,7 @@ import (
 var api_logger = log.Logger("api")
 
 type Api struct {
-	memTxChan chan *TransactionWrapper
+	memTxChan chan *Transaction
 }
 
 type TXRequest struct {
@@ -34,13 +34,10 @@ func (a *Api) IndexFunc(w http.ResponseWriter, r *http.Request) {
 		StakeAmount: 0,
 		Candidate:   nil,
 		Data:        txr.Data,
+		Timestamp:   time.Now().UnixNano(),
 	}
-	txw := TransactionWrapper{
-		ID:        nil,
-		TX:        &tx,
-		Timestamp: time.Now().UnixNano(),
-	}
-	a.memTxChan <- &txw
+	tx.SetId()
+	a.memTxChan <- &tx
 	_, _ = fmt.Fprintf(w, "success")
 }
 
