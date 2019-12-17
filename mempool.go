@@ -5,10 +5,12 @@ import (
 )
 
 type MemPool struct {
-	ApiMemTxChan  chan *TransactionWrapper // transaction receive from api
-	MemPeerTxChan chan *TransactionWrapper // mem -> peer: broadcast
-	PeerMemTx     chan *TransactionWrapper // peer -> mem: tx received
-	IncomingBlock chan *Block              //block receive from
+	ApiMemTxChan  chan *TransactionWrapper   // api -> mem: transaction receive from api
+	MemPeerTxChan chan *TransactionWrapper   // mem -> peer: broadcast
+	PeerMemTx     chan *TransactionWrapper   // peer -> mem: tx received
+	BFMemChan     chan bool                  //BlockFactory -> mem : notify chan
+	MemBFChan     chan []*TransactionWrapper //mem -> BlockFactory: tx to forge block
+	IncomingBlock chan *Block                //block receive from
 	TXPool        []*TransactionWrapper
 }
 
@@ -37,6 +39,9 @@ func (m *MemPool) Start() {
 		case tx := <-m.PeerMemTx:
 			memLogger.Info("receive from peer")
 			m.TXPool = append(m.TXPool, tx)
+		case <-m.BFMemChan:
+			memLogger.Info("Receive signal from bf")
+			m.MemBFChan <- m.TXPool
 		}
 	}
 }

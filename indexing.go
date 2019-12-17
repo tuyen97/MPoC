@@ -182,10 +182,9 @@ func (i *Index) GetTotalVote(addr string) int {
 }
 
 func (i *Index) GetTopKVote(k int) []string {
-	sql := "select address,sum(amount) as total from Vote group by address order by total desc"
+	sql := fmt.Sprintf("select address,sum(amount) as total from Vote group by address order by total desc limit %d", k)
 	stmt, _ := i.Conn.Prepare(sql)
 	_ = stmt.Exec()
-	count := 0
 	topK := []string{}
 	for {
 		hasRow, err := stmt.Step()
@@ -203,10 +202,6 @@ func (i *Index) GetTopKVote(k int) []string {
 		err = stmt.Scan(&address, &total)
 		topK = append(topK, address)
 		if err != nil {
-			break
-		}
-		count++
-		if count == k {
 			break
 		}
 	}

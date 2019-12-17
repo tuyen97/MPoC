@@ -10,6 +10,7 @@ func msToNextIndex(ms int64) int64 {
 	return msToIndex(ms + blockIntervalMs)
 }
 
+//
 //func main() {
 //	ticker := time.NewTicker(time.Duration(1 * time.Second))
 //	go func() {

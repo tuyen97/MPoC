@@ -91,3 +91,11 @@ func (g *GenesisBlock) String() string {
 	b, _ := json.Marshal(g)
 	return string(b)
 }
+
+func GetInitialBPs() []string {
+	b, g := GetGenesis()
+	if !b {
+		log.Println("Genesis does not exist")
+	}
+	return g.BPs
+}

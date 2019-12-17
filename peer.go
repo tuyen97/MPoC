@@ -65,6 +65,7 @@ func (p *Peer) handleIncomingTx(sub *pubsub.Subscription, ctx context.Context) {
 			panic(err)
 		}
 		tx := DeserializeTxW(msg.GetData())
+		logger.Info("Receive tx")
 		p.PeerMemTxChan <- tx
 	}
 
