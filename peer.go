@@ -15,10 +15,10 @@ import (
 var logger = log.Logger("peer")
 
 type Peer struct {
-	MemPeerTxChan   chan *TransactionWrapper // mem -> peer :broadcast
-	PeerMemTxChan   chan *TransactionWrapper //peer -> mem: receive from broadcast
-	PeerBFBlockChan chan *Block              // peer -> bf: receive from broadcast
-	BFPeerBlockChan chan *Block              // bf -> peer: block
+	MemPeerTxChan   chan *Transaction // mem -> peer :broadcast
+	PeerMemTxChan   chan *Transaction //peer -> mem: receive from broadcast
+	PeerBFBlockChan chan *Block       // peer -> bf: receive from broadcast
+	BFPeerBlockChan chan *Block       // bf -> peer: block
 }
 
 type DiscoveryNotifiee struct {
@@ -29,7 +29,7 @@ func (d *DiscoveryNotifiee) HandlePeerFound(peerInfo peer.AddrInfo) {
 	d.peerchan <- peerInfo
 }
 
-func (p *Peer) broadcastTx(pub *pubsub.Topic, ctx context.Context, tx TransactionWrapper) {
+func (p *Peer) broadcastTx(pub *pubsub.Topic, ctx context.Context, tx Transaction) {
 	err := pub.Publish(ctx, tx.Serialize())
 	if err != nil {
 		logger.Error("Cannot broadcast tx")
@@ -72,7 +72,7 @@ func (p *Peer) handleIncomingTx(sub *pubsub.Subscription, ctx context.Context) {
 			//fmt.Println("Error (sub.Next): %v", err)
 			panic(err)
 		}
-		tx := DeserializeTxW(msg.GetData())
+		tx := DeserializeTx(msg.GetData())
 		logger.Info("Receive tx")
 		p.PeerMemTxChan <- tx
 	}
@@ -87,8 +87,8 @@ func (p *Peer) handleIncomingBlock(sub *pubsub.Subscription, ctx context.Context
 			panic(err)
 		}
 		block := DeserializeBlock(msg.GetData())
-		logger.Info("Receive tx")
-		p.BFPeerBlockChan <- block
+		logger.Info("Receive block")
+		p.PeerBFBlockChan <- block
 	}
 }
 
@@ -121,91 +121,36 @@ func (p *Peer) Start(port string) {
 	}()
 
 	//new pubsub
-	pubsub, err := pubsub.NewGossipSub(ctx, host)
+	ps, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		logger.Error("Cannot init pubsub")
 	}
+	pub := make(map[string]*pubsub.Topic)
 	//register topics
-	RegisterTopic(pubsub, ctx, "genesis", handleGenesis)
-	txTopic := RegisterTopic(pubsub, ctx, "tx", p.handleIncomingTx)
-	RegisterTopic(pubsub, ctx, "block", p.handleIncomingBlock)
+	RegisterTopic(ps, ctx, "genesis", handleGenesis)
+	txTopic := RegisterTopic(ps, ctx, "tx", p.handleIncomingTx)
+	pub["tx"] = txTopic
+	blockTopic := RegisterTopic(ps, ctx, "block", p.handleIncomingBlock)
+	pub["block"] = blockTopic
 
 	//serve other component in node
-	p.ServeInternal(txTopic, ctx)
+	p.ServeInternal(pub, ctx)
 
 	logger.Info("Peer started")
 }
 
-func (p *Peer) ServeInternal(pub *pubsub.Topic, ctx context.Context) {
+func (p *Peer) ServeInternal(pub map[string]*pubsub.Topic, ctx context.Context) {
 	go func() {
 		for {
 			select {
 			case tx := <-p.MemPeerTxChan:
 				logger.Info("Broadcast tx")
-				p.broadcastTx(pub, ctx, *tx)
+				p.broadcastTx(pub["tx"], ctx, *tx)
 			case block := <-p.BFPeerBlockChan:
 				logger.Info("Broadcast block")
-				p.broadcastBlock(pub, ctx, block)
+				p.broadcastBlock(pub["block"], ctx, block)
 			}
 		}
 	}()
 
 }
-
-//func main() {
-//	//log.SetAllLoggers(logging.WARNING)
-//	//log.SetLogLevel("rendezvous", "info")
-//
-//	ctx := context.Background()
-//	//new host
-//	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", os.Args[1], os.Args[2])))
-//	if err != nil {
-//		logger.Error(err)
-//	}
-//
-//	fmt.Println(host.Addrs())
-//
-//	//new pubsub
-//	pubsub, err := pubsub.NewGossipSub(ctx, host)
-//	if err != nil {
-//		logger.Error("Cannot init pubsub")
-//	}
-//	topic, err := pubsub.Join("genesis")
-//	if err != nil {
-//		logger.Error("Cannot join topic")
-//	}
-//
-//	sub, _ := topic.Subscribe()
-//	go func() {
-//		for {
-//			msg, err := sub.Next(ctx)
-//			if err != nil {
-//				//fmt.Println("Error (sub.Next): %v", err)
-//				panic(err)
-//			}
-//
-//			fmt.Printf("%s: %s\n", msg.GetFrom(), string(msg.GetData()))
-//		}
-//	}()
-//
-//	//new mdns
-//	service, err := discovery.NewMdnsService(ctx, host, 2*time.Second, "test")
-//
-//	peerchan := make(chan peer.AddrInfo)
-//	//register notifiee
-//	service.RegisterNotifee(&DiscoveryNotifiee{peerchan: peerchan})
-//	go func() {
-//		for {
-//			select {
-//			case addrinfo := <-peerchan:
-//				logger.Infof("Connecting to %s", addrinfo.String())
-//				logger.Infof("topic peers: %s", topic.ListPeers())
-//				if err := host.Connect(ctx, addrinfo); err != nil {
-//					logger.Error("Connection failed:", err)
-//				}
-//			}
-//		}
-//	}()
-//
-//	select {}
-//}

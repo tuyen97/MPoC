@@ -34,12 +34,17 @@ func (m *MemPool) Start() {
 	for {
 		select {
 		case tx := <-m.ApiMemTxChan:
-			//memLogger.Info("receive from api")
+			memLogger.Infof("receive tx %s  from api", tx)
 			m.MemPeerTxChan <- tx
-			m.TXPool[string(tx.ID)] = tx
+			if m.TXPool[string(tx.ID)] == nil {
+				m.TXPool[string(tx.ID)] = tx
+			}
 		case tx := <-m.PeerMemTx:
 			//memLogger.Info("receive from peer")
-			m.TXPool[string(tx.ID)] = tx
+			if m.TXPool[string(tx.ID)] == nil {
+				memLogger.Infof("add tx : %s", tx)
+				m.TXPool[string(tx.ID)] = tx
+			}
 		case <-m.BFMemChan:
 			//memLogger.Info("Receive signal from bf")
 			m.MemBFChan <- m.TXPool

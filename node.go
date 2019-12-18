@@ -16,22 +16,26 @@ var nodeLogger = log.Logger("node")
 
 func main() {
 
-	memPeerTxChan := make(chan *TransactionWrapper)
-	peerMemTxChan := make(chan *TransactionWrapper)
+	memPeerTxChan := make(chan *Transaction)
+	peerMemTxChan := make(chan *Transaction)
+	bfPeerChan := make(chan *Block)
+	peerBfBlockChan := make(chan *Block)
 	peer := Peer{
-		MemPeerTxChan: memPeerTxChan,
-		PeerMemTxChan: peerMemTxChan,
+		MemPeerTxChan:   memPeerTxChan,
+		PeerMemTxChan:   peerMemTxChan,
+		BFPeerBlockChan: bfPeerChan,
+		PeerBFBlockChan: peerBfBlockChan,
 	}
 	peer.Start(os.Args[1])
 
-	apiMemTxChan := make(chan *TransactionWrapper)
+	apiMemTxChan := make(chan *Transaction)
 	api := Api{memTxChan: apiMemTxChan}
 	api.Start(os.Args[2])
 
-	txPool := make(map[string]*TransactionWrapper)
+	txPool := make(map[string]*Transaction)
 	bfMemChan := make(chan bool)
-	memBfChan := make(chan map[string]*TransactionWrapper)
-	returnMemBFChan := make(chan map[string]*TransactionWrapper)
+	memBfChan := make(chan map[string]*Transaction)
+	returnMemBFChan := make(chan map[string]*Transaction)
 	mem := MemPool{
 		TXPool:          txPool,
 		ApiMemTxChan:    apiMemTxChan,
@@ -43,7 +47,13 @@ func main() {
 	}
 	go mem.Start()
 
-	bf := BlockFactory{ReturnBFMemChan: returnMemBFChan, BFMemChan: bfMemChan, MemBFChan: memBfChan, Address: os.Args[3]}
+	bf := BlockFactory{
+		BFPeerChan:      bfPeerChan,
+		PeerBFChan:      peerBfBlockChan,
+		ReturnBFMemChan: returnMemBFChan,
+		BFMemChan:       bfMemChan,
+		MemBFChan:       memBfChan,
+		Address:         os.Args[3]}
 	go bf.Start()
 	nodeLogger.Info("Node started")
 	select {}

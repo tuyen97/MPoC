@@ -8,6 +8,7 @@ import (
 type BlockFactory struct {
 	Address         string
 	PeerBFChan      chan *Block
+	BFPeerChan      chan *Block
 	BFMemChan       chan bool
 	MemBFChan       chan map[string]*Transaction
 	ReturnBFMemChan chan map[string]*Transaction
@@ -89,8 +90,13 @@ func (b *BlockFactory) ServeInternal() {
 			block.SetHash()
 			bfLogger.Infof("New block produced %d", int(block.Index))
 			b.ReturnBFMemChan <- txs
+			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:
-
+			txs := make(map[string]*Transaction)
+			for _, tx := range block.Txs {
+				txs[string(tx.ID)] = &tx
+			}
+			b.ReturnBFMemChan <- txs
 		}
 	}
 }

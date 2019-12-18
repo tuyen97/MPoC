@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/json"
 	"log"
 	"math/big"
 	"strconv"
@@ -84,6 +85,29 @@ func (tx *Transaction) Verify() bool {
 		return false
 	}
 	return true
+}
+
+func DeserializeTx(d []byte) *Transaction {
+	var tx Transaction
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	decoder.Decode(&tx)
+	return &tx
+}
+
+func (t *Transaction) Serialize() []byte {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+	err := encoder.Encode(t)
+	if err != nil {
+		log.Println("serialize error")
+		return []byte{}
+	}
+	return result.Bytes()
+}
+
+func (tx *Transaction) String() string {
+	b, _ := json.Marshal(tx)
+	return string(b)
 }
 
 //func (tx *Transaction) Verify()  {
