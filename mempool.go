@@ -31,29 +31,34 @@ var memLogger = log.Logger("mem")
 
 func (m *MemPool) Start() {
 	log.SetLogLevel("mem", "info")
-	for {
-		select {
-		case tx := <-m.ApiMemTxChan:
-			memLogger.Infof("receive tx %s  from api", tx)
-			m.MemPeerTxChan <- tx
-			if m.TXPool[string(tx.ID)] == nil {
-				m.TXPool[string(tx.ID)] = tx
-			}
-		case tx := <-m.PeerMemTx:
-			//memLogger.Info("receive from peer")
-			if m.TXPool[string(tx.ID)] == nil {
-				memLogger.Infof("add tx : %s", tx)
-				m.TXPool[string(tx.ID)] = tx
-			}
-		case <-m.BFMemChan:
-			//memLogger.Info("Receive signal from bf")
-			m.MemBFChan <- m.TXPool
-		case txs := <-m.ReturnMemBFChan:
-			//memLogger.Info("Receive tx from bf")
-			for key, _ := range txs {
-				delete(m.TXPool, key)
-			}
+	go func() {
+		for {
+			select {
+			case tx := <-m.ApiMemTxChan:
+				memLogger.Infof("receive tx %s  from api", tx)
+				m.MemPeerTxChan <- tx
+				if m.TXPool[string(tx.ID)] == nil {
+					m.TXPool[string(tx.ID)] = tx
+				}
+			case tx := <-m.PeerMemTx:
+				//memLogger.Info("receive from peer")
+				if m.TXPool[string(tx.ID)] == nil {
+					memLogger.Infof("add tx : %s", tx)
+					m.TXPool[string(tx.ID)] = tx
+				}
+			case <-m.BFMemChan:
+				//memLogger.Info("Receive signal from bf")
+				m.MemBFChan <- m.TXPool
+			case txs := <-m.ReturnMemBFChan:
+				//memLogger.Info("Receive tx from bf")
+				for key, _ := range txs {
+					delete(m.TXPool, key)
+				}
 
+			}
 		}
-	}
+	}()
+
+	memLogger.Info("mem started")
+
 }

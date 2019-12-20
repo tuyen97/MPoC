@@ -32,10 +32,11 @@ func (b *BlockFactory) ticker() {
 			//bfLogger.Infof("Slot now: %d", int(currentSlot))
 			lastblock, err := GetLastBlock()
 			//am i the current bp?
-			if err != nil {
+			if err == nil {
 				if b.Address == lastblock.BPs[currentSlot] {
 					b.BFMemChan <- true
 				}
+				//use initial bps
 			} else {
 				if b.Address == g.BPs[currentSlot] {
 					b.BFMemChan <- true
@@ -52,30 +53,36 @@ func (b *BlockFactory) ServeInternal() {
 		case txs := <-b.MemBFChan:
 			bfLogger.Infof("Got %d transaction", len(txs))
 			_, g := GetGenesis()
+			index := GetOrInitIndex()
+
 			blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
 			currentSlot := (time.Now().UnixNano() - g.Timestamp) % blockTime
 			var tnx []Transaction
 			for _, tx := range txs {
-				tnx = append(tnx, *tx)
+				//execute transaction
+				if index.Update(tx) {
+					tnx = append(tnx, *tx)
+				}
+
 			}
 
 			var bps []string
-			lastblock, err := GetLastBlock()
 			//end of epoch -> recalculate bps
 			if currentSlot == TopK-1 {
-				topk := GetOrInitIndex().GetTopKVote(TopK)
+				topk := index.GetTopKVote(TopK)
 				//not enough bps
-				if len(topk) < TopK {
-					//if have block
-					if err != nil {
-						bps = lastblock.BPs
-					} else {
-						bps = GetInitialBPs()
-					}
-				} else {
-					//bps = new calculated value
-					bps = topk
-				}
+				//if len(topk) < TopK {
+				//	//if have block
+				//	if err != nil {
+				//		bps = lastblock.BPs
+				//	} else {
+				//		bps = GetInitialBPs()
+				//	}
+				//} else {
+				//	//bps = new calculated value
+				//	bps = topk
+				//}
+				bps = topk
 			}
 
 			block := Block{
@@ -83,12 +90,13 @@ func (b *BlockFactory) ServeInternal() {
 				PrevHash:  nil,
 				Index:     int(blockNo),
 				Timestamp: time.Now().UnixNano(),
-				Creator:   []byte(b.Address),
+				Creator:   b.Address,
 				Txs:       tnx,
 				BPs:       bps,
 			}
 			block.SetHash()
 			bfLogger.Infof("New block produced %d", int(block.Index))
+			block.Save()
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:

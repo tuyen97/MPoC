@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/bvinc/go-sqlite-lite/sqlite3"
-	log "github.com/sirupsen/logrus"
+	"github.com/ipfs/go-log"
 )
 
 var idx *Index = nil
@@ -31,13 +31,14 @@ func ReIndex() {
 
 }
 
-func (i *Index) Update(tx *Transaction) bool {
+var indexLogger = log.Logger("bf")
 
+func (i *Index) Update(tx *Transaction) bool {
 	switch tx.Type {
 	//staking
 	case 1:
 		//get address
-		addr := fmt.Sprintf("%s", GetAddress(tx.Sender))
+		addr := tx.Sender
 		amount := tx.StakeAmount
 		balance := i.GetBalance(addr)
 		if balance < amount {
@@ -59,7 +60,7 @@ func (i *Index) Update(tx *Transaction) bool {
 			_ = stmt.Exec(stake+amount, addr)
 		}
 	case 2:
-		voter := fmt.Sprintf("%s", GetAddress(tx.Sender))
+		voter := tx.Sender
 		//delete old vote
 		stmt, _ := i.Conn.Prepare("DELETE FROM Vote WHERE voter=?")
 		_ = stmt.Exec(voter)
@@ -67,24 +68,19 @@ func (i *Index) Update(tx *Transaction) bool {
 
 		//add new vote
 		stake := i.GetStake(voter)
-		log.SetFormatter(&log.TextFormatter{ForceColors: true})
-		log.Infof("%s stake %d", voter, stake)
+		//log.SetFormatter(&log.TextFormatter{ForceColors: true})
+		indexLogger.Infof("%s stake %d", voter, stake)
 		if stake < 0 {
 			return false
 		}
 		for _, candidate := range tx.Candidate {
-			tvote := i.GetTotalVote(candidate)
-			//candidate not yet voted
-			if tvote <= 0 {
-				stmt, _ = i.Conn.Prepare("INSERT INTO Vote VALUES (?,?,?)")
-				log.Infof("%s receive %d from %s", candidate, stake, voter)
-				_ = stmt.Exec(candidate, stake, voter)
-				_ = stmt.Reset()
-			} else {
-				stmt, _ = i.Conn.Prepare("UPDATE Vote SET amount=?, voter=? WHERE address=?")
-				_ = stmt.Exec(stake, voter, candidate)
-				_ = stmt.Reset()
-			}
+			stmt, _ = i.Conn.Prepare("DELETE FROM Vote WHERE address=? AND  voter=?")
+			_ = stmt.Exec(candidate, voter)
+			_ = stmt.Reset()
+			stmt, _ = i.Conn.Prepare("INSERT INTO Vote VALUES (?,?,?)")
+			indexLogger.Infof("%s receive %d from %s", candidate, stake, voter)
+			_ = stmt.Exec(candidate, stake, voter)
+			_ = stmt.Reset()
 
 		}
 	}
@@ -95,7 +91,7 @@ func (i *Index) Init() {
 	i.Conn = InitSqlite()
 	b, genesis := GetGenesis()
 	if !b {
-		log.Error("genesis not exist")
+		indexLogger.Error("genesis not exist")
 	}
 
 	for k, v := range genesis.Balance {
@@ -103,7 +99,7 @@ func (i *Index) Init() {
 		err := stmt.Exec(k, v)
 		stmt.Reset()
 		if err != nil {
-			log.Error("cannot execute statement")
+			indexLogger.Error("cannot execute statement")
 		}
 	}
 }
@@ -205,6 +201,10 @@ func (i *Index) GetTopKVote(k int) []string {
 			break
 		}
 	}
+	//not enough vote, use initial setup
+	if len(topK) < k {
+		return GetInitialBPs()
+	}
 	return topK
 }
 
@@ -215,6 +215,5 @@ func GetOrInitIndex() *Index {
 		idx.Init()
 		return idx
 	}
-
 	return idx
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/ipfs/go-log"
@@ -18,6 +19,60 @@ type TXRequest struct {
 	Data string
 }
 
+type StakeRequest struct {
+	Sender string
+	Amount int
+}
+
+type VoteRequest struct {
+	Voter      string
+	Candidates []string
+}
+
+func (a *Api) VoteFunc(w http.ResponseWriter, r *http.Request) {
+	var v VoteRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&v)
+	if err != nil {
+		_, _ = fmt.Fprintf(w, "Cannot decode body")
+	}
+	api_logger.Info(v.Candidates)
+	tx := Transaction{
+		ID:          nil,
+		Sender:      v.Voter,
+		Type:        2,
+		StakeAmount: 0,
+		Candidate:   v.Candidates,
+		Data:        "txr.Data",
+		Timestamp:   time.Now().UnixNano(),
+	}
+	tx.SetId()
+	a.memTxChan <- &tx
+	_, _ = fmt.Fprintf(w, "success")
+
+}
+
+func (a *Api) StakeFunc(w http.ResponseWriter, r *http.Request) {
+	var s StakeRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&s)
+	if err != nil {
+		_, _ = fmt.Fprintf(w, "Cannot decode body")
+	}
+	tx := Transaction{
+		ID:          nil,
+		Sender:      s.Sender,
+		Type:        1,
+		StakeAmount: s.Amount,
+		Candidate:   nil,
+		Data:        "txr.Data",
+		Timestamp:   time.Now().UnixNano(),
+	}
+	tx.SetId()
+	a.memTxChan <- &tx
+	_, _ = fmt.Fprintf(w, "success")
+}
+
 func (a *Api) IndexFunc(w http.ResponseWriter, r *http.Request) {
 	//var txr TXRequest
 	//decoder := json.NewDecoder(r.Body)
@@ -27,8 +82,7 @@ func (a *Api) IndexFunc(w http.ResponseWriter, r *http.Request) {
 	//}
 	tx := Transaction{
 		ID:          nil,
-		Signature:   nil,
-		Sender:      nil,
+		Sender:      "",
 		Type:        0,
 		StakeAmount: 0,
 		Candidate:   nil,
@@ -45,6 +99,8 @@ func (api *Api) Start(port string) {
 	log.SetLogLevel("api", "info")
 	router := mux.NewRouter()
 	router.HandleFunc("/", api.IndexFunc).Methods("GET")
+	router.HandleFunc("/stake", api.StakeFunc).Methods("POST")
+	router.HandleFunc("/vote", api.VoteFunc).Methods("POST")
 	go http.ListenAndServe(fmt.Sprintf("127.0.0.1:%s", port), router)
 	api_logger.Info("Server started")
 }

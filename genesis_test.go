@@ -16,15 +16,14 @@ func TestNewGenesis(t *testing.T) {
 	}
 	ws.SaveToFile()
 	genesis := NewGenesis(balance, bps)
-	genesis.Save()
+	genesis.String()
 }
 
 func TestGetGenesis(t *testing.T) {
-	if DBExists() {
-		_, genesis := GetGenesis()
-		fmt.Println(genesis)
-		if genesis == nil || len(genesis.BPs) == 0 {
-			t.Error("cannot get genesis block")
-		}
+	_, genesis := GetGenesis()
+	fmt.Println(genesis)
+	if genesis == nil || len(genesis.BPs) == 0 {
+		t.Error("cannot get genesis block")
 	}
+
 }

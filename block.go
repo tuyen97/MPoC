@@ -15,7 +15,7 @@ type Block struct {
 	PrevHash  []byte
 	Index     int
 	Timestamp int64
-	Creator   []byte
+	Creator   string
 	Txs       []Transaction
 	BPs       []string
 }
@@ -28,33 +28,9 @@ func (b *Block) SetHash() {
 	for _, bp := range b.BPs {
 		bps = bytes.Join([][]byte{[]byte(bp)}, []byte{})
 	}
-	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, b.Creator, bps}, []byte{})
+	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, []byte(b.Creator), bps}, []byte{})
 	hash := sha256.Sum256(headers)
 	b.Hash = hash[:]
-}
-
-func (b *Block) Sign() []byte {
-	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	index := []byte(strconv.Itoa(b.Index))
-	bps := []byte{}
-	for _, bp := range b.BPs {
-		bps = bytes.Join([][]byte{[]byte(bp)}, []byte{})
-	}
-	headers := bytes.Join([][]byte{b.PrevHash, b.HashTransactions(), index, timestamp, b.Creator, bps}, []byte{})
-	hash := sha256.Sum256(headers)
-	return hash[:]
-}
-
-func (b *Block) Verify() bool {
-	for _, tx := range b.Txs {
-		if !tx.Verify() {
-			return false
-		}
-	}
-	if len(b.Hash) == 0 || len(b.Creator) == 0 {
-		return false
-	}
-	return true
 }
 
 func (b *Block) HashTransactions() []byte {
@@ -124,6 +100,9 @@ func GetLastBlock() (*Block, error) {
 		block = DeserializeBlock(data)
 		return nil
 	})
+	if len(block.BPs) == 0 {
+		return &Block{}, errors.New("Blockchain empty")
+	}
 	return block, nil
 }
 

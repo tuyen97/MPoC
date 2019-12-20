@@ -1,8 +1,12 @@
 package main
 
-//func main() {
-//	w, _ := NewWallets()
-//	address := w.CreateWallet()
-//	w.SaveToFile()
-//	fmt.Println(address)
-//}
+import (
+	"os"
+)
+
+func main() {
+	node := Node{}
+	node.Init(os.Args[3])
+	node.Start(os.Args[1], os.Args[2])
+	select {}
+}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/ipfs/go-log"
-	"os"
 )
 
 type Node struct {
@@ -14,7 +13,16 @@ type Node struct {
 
 var nodeLogger = log.Logger("node")
 
-func main() {
+func (node *Node) Start(api, peer string) {
+	log.SetLogLevel("node", "info")
+	node.api.Start(api)
+	node.blockFactory.Start()
+	node.mempool.Start()
+	node.peer.Start(peer)
+	nodeLogger.Info("Node started")
+}
+
+func (node *Node) Init(addr string) {
 
 	memPeerTxChan := make(chan *Transaction)
 	peerMemTxChan := make(chan *Transaction)
@@ -26,11 +34,11 @@ func main() {
 		BFPeerBlockChan: bfPeerChan,
 		PeerBFBlockChan: peerBfBlockChan,
 	}
-	peer.Start(os.Args[1])
+	node.peer = peer
 
 	apiMemTxChan := make(chan *Transaction)
 	api := Api{memTxChan: apiMemTxChan}
-	api.Start(os.Args[2])
+	node.api = api
 
 	txPool := make(map[string]*Transaction)
 	bfMemChan := make(chan bool)
@@ -45,7 +53,7 @@ func main() {
 		MemBFChan:       memBfChan,
 		ReturnMemBFChan: returnMemBFChan,
 	}
-	go mem.Start()
+	node.mempool = mem
 
 	bf := BlockFactory{
 		BFPeerChan:      bfPeerChan,
@@ -53,8 +61,6 @@ func main() {
 		ReturnBFMemChan: returnMemBFChan,
 		BFMemChan:       bfMemChan,
 		MemBFChan:       memBfChan,
-		Address:         os.Args[3]}
-	go bf.Start()
-	nodeLogger.Info("Node started")
-	select {}
+		Address:         addr}
+	node.blockFactory = bf
 }
