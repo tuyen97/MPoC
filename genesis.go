@@ -15,6 +15,8 @@ type GenesisBlock struct {
 	BPs       []string
 }
 
+const genesis = "genesis.json"
+
 func (b *GenesisBlock) Serialize() []byte {
 	var result bytes.Buffer
 	encoder := gob.NewEncoder(&result)
@@ -44,7 +46,7 @@ func DeserializeGenesis(d []byte) *GenesisBlock {
 }
 
 func GetGenesis() (bool, *GenesisBlock) {
-	file, err := os.Open("/home/tuyen/Desktop/genesis.json")
+	file, err := os.Open(genesis)
 	if err != nil {
 		return false, &GenesisBlock{}
 	}

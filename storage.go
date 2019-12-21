@@ -38,9 +38,8 @@ func InitSqlite() *sqlite3.Conn {
 		_ = stmt.Exec()
 
 		//_ = stmt.Reset()
-		stmt, _ = conn.Prepare(`CREATE TABLE Vote(address TEXT PRIMARY KEY, amount INTEGER, voter TEXT)`)
+		stmt, _ = conn.Prepare(`CREATE TABLE Vote(address TEXT , amount INTEGER, voter TEXT, CONSTRAINT vote_pk PRIMARY KEY (address, voter))`)
 		_ = stmt.Exec()
-
 		conn.Close()
 	}
 	conn, _ := sqlite3.Open(sqliteFile)

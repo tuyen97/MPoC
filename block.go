@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
 	"strconv"
@@ -57,7 +58,7 @@ func (b *Block) Serialize() []byte {
 }
 
 func (bl *Block) Save() bool {
-	if DBExists() {
+	if !DBExists() {
 		return false
 	}
 	lastBlock, err := GetLastBlock()
@@ -65,6 +66,7 @@ func (bl *Block) Save() bool {
 	if err == nil {
 		bestHeight = lastBlock.Index
 	}
+	fmt.Println("bl index ", bl.Index)
 
 	if bl.Index > bestHeight {
 		db, _ := bolt.Open(dbFile, 0600, nil)

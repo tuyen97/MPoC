@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ipfs/go-log"
 	"time"
 )
@@ -56,7 +57,7 @@ func (b *BlockFactory) ServeInternal() {
 			index := GetOrInitIndex()
 
 			blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
-			currentSlot := (time.Now().UnixNano() - g.Timestamp) % blockTime
+			currentSlot := (time.Now().UnixNano() - g.Timestamp) % (3 * blockTime) / 1000000000
 			var tnx []Transaction
 			for _, tx := range txs {
 				//execute transaction
@@ -68,8 +69,10 @@ func (b *BlockFactory) ServeInternal() {
 
 			var bps []string
 			//end of epoch -> recalculate bps
+			fmt.Println("c:", currentSlot)
 			if currentSlot == TopK-1 {
 				topk := index.GetTopKVote(TopK)
+				fmt.Println("top k:", topk)
 				//not enough bps
 				//if len(topk) < TopK {
 				//	//if have block
