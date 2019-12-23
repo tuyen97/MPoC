@@ -112,6 +112,6 @@ func (api *Api) Start(port string) {
 	router.HandleFunc("/stake", api.StakeFunc).Methods("POST")
 	router.HandleFunc("/vote", api.VoteFunc).Methods("POST")
 	router.HandleFunc("/lastblock", api.GetLastBlock).Methods("GET")
-	go http.ListenAndServe(fmt.Sprintf("127.0.0.1:%s", port), router)
+	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), router)
 	api_logger.Info("Server started")
 }

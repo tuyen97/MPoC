@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/ipfs/go-log"
 	"time"
+
+	"github.com/ipfs/go-log"
 )
 
 type BlockFactory struct {
@@ -23,7 +24,8 @@ const blockTime = int64(1 * time.Second)
 
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
-	sinceGenesis := (time.Now().UnixNano() - g.Timestamp) / blockTime
+	//sleep 5 block before start
+	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
 	time.Sleep(time.Duration(sinceGenesis))
 	ticker := time.NewTicker(time.Duration(1 * time.Second))
 	for {
@@ -73,18 +75,6 @@ func (b *BlockFactory) ServeInternal() {
 			if currentSlot == TopK-1 {
 				topk := index.GetTopKVote(TopK)
 				fmt.Println("top k:", topk)
-				//not enough bps
-				//if len(topk) < TopK {
-				//	//if have block
-				//	if err != nil {
-				//		bps = lastblock.BPs
-				//	} else {
-				//		bps = GetInitialBPs()
-				//	}
-				//} else {
-				//	//bps = new calculated value
-				//	bps = topk
-				//}
 				bps = topk
 			}
 
@@ -113,6 +103,7 @@ func (b *BlockFactory) ServeInternal() {
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
+	logger.Infof("i am %s", b.Address)
 	go b.ticker()
 	go b.ServeInternal()
 	bfLogger.Infof("BF started")

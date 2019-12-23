@@ -4,6 +4,7 @@ import (
 	"os"
 )
 
+//<api_port> <peer_port> <address>
 func main() {
 	node := Node{}
 	node.Init(os.Args[3])
