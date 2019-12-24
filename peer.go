@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
@@ -112,8 +113,10 @@ func (p *Peer) Start(port string) {
 		for {
 			select {
 			case addrinfo := <-peerchan:
-				if err := host.Connect(ctx, addrinfo); err != nil {
-					logger.Error("Connection failed:", err)
+				if host.Network().Connectedness(addrinfo.ID) != network.Connected {
+					if err := host.Connect(ctx, addrinfo); err != nil {
+						logger.Error("Connection failed:", err)
+					}
 				}
 			}
 		}

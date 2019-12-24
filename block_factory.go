@@ -18,7 +18,7 @@ type BlockFactory struct {
 
 var bfLogger = log.Logger("bf")
 
-const TopK = 3
+var TopK = 3
 
 const blockTime = int64(1 * time.Second)
 
@@ -59,7 +59,7 @@ func (b *BlockFactory) ServeInternal() {
 			index := GetOrInitIndex()
 
 			blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
-			currentSlot := (time.Now().UnixNano() - g.Timestamp) % (3 * blockTime) / 1000000000
+			currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
 			var tnx []Transaction
 			for _, tx := range txs {
 				//execute transaction
@@ -101,9 +101,14 @@ func (b *BlockFactory) ServeInternal() {
 		}
 	}
 }
+func (b *BlockFactory) init() {
+	_, g := GetGenesis()
+	TopK = len(g.BPs)
+}
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
 	logger.Infof("i am %s", b.Address)
+	b.init()
 	go b.ticker()
 	go b.ServeInternal()
 	bfLogger.Infof("BF started")

@@ -1,4 +1,4 @@
-module go_test
+module dpos
 
 require (
 	github.com/boltdb/bolt v1.3.1
