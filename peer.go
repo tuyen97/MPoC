@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -97,7 +98,8 @@ func (p *Peer) Start(port string) {
 	log.SetLogLevel("peer", "info")
 	ctx := context.Background()
 	//new host
-	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%s", port)))
+	connMgr := connmgr.NewConnManager(4, 12, 1*time.Second)
+	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%s", port)), libp2p.ConnectionManager(connMgr))
 	if err != nil {
 		logger.Error(err)
 	}

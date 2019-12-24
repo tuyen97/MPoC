@@ -8,14 +8,11 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/ipfs/go-log v0.0.1
 	github.com/libp2p/go-libp2p v0.4.2
-	github.com/libp2p/go-libp2p-core v0.2.5
+	github.com/libp2p/go-libp2p-connmgr v0.2.1 // indirect
+	github.com/libp2p/go-libp2p-core v0.3.0
 	github.com/libp2p/go-libp2p-pubsub v0.2.4
 	github.com/libp2p/go-libp2p-testing v0.1.1 // indirect
-	github.com/mr-tron/base58 v1.1.3 // indirect
-	github.com/multiformats/go-multiaddr v0.2.0 // indirect
-	github.com/multiformats/go-multihash v0.0.10 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	go.opencensus.io v0.22.2 // indirect
 	golang.org/x/crypto v0.0.0-20191108234033-bd318be0434a
 )
 
