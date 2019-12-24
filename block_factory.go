@@ -25,7 +25,7 @@ const blockTime = int64(1 * time.Second)
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
-	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 15*blockTime
+	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
 	time.Sleep(time.Duration(sinceGenesis))
 	ticker := time.NewTicker(time.Duration(1 * time.Second))
 	for {
@@ -89,7 +89,7 @@ func (b *BlockFactory) ServeInternal() {
 			}
 			block.SetHash()
 			bfLogger.Infof("New block produced %d", int(block.Index))
-			block.Save()
+			//block.Save()
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:
