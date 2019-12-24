@@ -73,7 +73,7 @@ func (p *Peer) handleIncomingTx(sub *pubsub.Subscription, ctx context.Context) {
 			panic(err)
 		}
 		tx := DeserializeTx(msg.GetData())
-		logger.Info("Receive tx")
+		//logger.Info("Receive tx")
 		p.PeerMemTxChan <- tx
 	}
 
@@ -146,7 +146,7 @@ func (p *Peer) ServeInternal(pub map[string]*pubsub.Topic, ctx context.Context) 
 		for {
 			select {
 			case tx := <-p.MemPeerTxChan:
-				logger.Info("Broadcast tx")
+				//logger.Info("Broadcast tx")
 				p.broadcastTx(pub["tx"], ctx, *tx)
 			case block := <-p.BFPeerBlockChan:
 				logger.Info("Broadcast block")
