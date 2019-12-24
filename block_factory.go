@@ -18,14 +18,14 @@ type BlockFactory struct {
 
 var bfLogger = log.Logger("bf")
 
-var TopK = 3
+var TopK int64
 
 const blockTime = int64(1 * time.Second)
 
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
-	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
+	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 15*blockTime
 	time.Sleep(time.Duration(sinceGenesis))
 	ticker := time.NewTicker(time.Duration(1 * time.Second))
 	for {
@@ -73,7 +73,7 @@ func (b *BlockFactory) ServeInternal() {
 			//end of epoch -> recalculate bps
 			fmt.Println("c:", currentSlot)
 			if currentSlot == TopK-1 {
-				topk := index.GetTopKVote(TopK)
+				topk := index.GetTopKVote(int(TopK))
 				fmt.Println("top k:", topk)
 				bps = topk
 			}
@@ -103,7 +103,7 @@ func (b *BlockFactory) ServeInternal() {
 }
 func (b *BlockFactory) init() {
 	_, g := GetGenesis()
-	TopK = len(g.BPs)
+	TopK = int64(len(g.BPs))
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
