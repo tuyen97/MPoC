@@ -17,8 +17,7 @@ type BlockFactory struct {
 }
 
 var bfLogger = log.Logger("bf")
-
-var TopK int64
+var lastBlock Block
 
 const blockTime = int64(1 * time.Second)
 
@@ -62,25 +61,34 @@ func (b *BlockFactory) ServeInternal() {
 			currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
 			var tnx []Transaction
 			for _, tx := range txs {
-				//execute transaction
-				if index.Update(tx) {
-					tnx = append(tnx, *tx)
-				}
+				tnx = append(tnx, *tx)
 
 			}
 
 			var bps []string
+			bl, err := GetLastBlock()
 			//end of epoch -> recalculate bps
 			fmt.Println("c:", currentSlot)
-			if currentSlot == TopK-1 {
-				topk := index.GetTopKVote(int(TopK))
+			if currentSlot == 0 {
+				topk := index.GetTopKBP(int(TopK))
 				fmt.Println("top k:", topk)
 				bps = topk
+			} else {
+				if err != nil {
+					bps = GetInitialBPs()
+				}
+			}
+
+			var prevHash []byte
+			if err != nil {
+				prevHash = []byte("genesis")
+			} else {
+				prevHash = bl.Hash
 			}
 
 			block := Block{
 				Hash:      nil,
-				PrevHash:  nil,
+				PrevHash:  prevHash,
 				Index:     int(blockNo),
 				Timestamp: time.Now().UnixNano(),
 				Creator:   b.Address,
@@ -89,7 +97,11 @@ func (b *BlockFactory) ServeInternal() {
 			}
 			block.SetHash()
 			bfLogger.Infof("New block produced %d", int(block.Index))
-			//block.Save()
+
+			//update database
+			index.Update(&block)
+
+			block.Save()
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
 	"strconv"
@@ -58,15 +58,14 @@ func (b *Block) Serialize() []byte {
 }
 
 func (bl *Block) Save() bool {
-	if !DBExists() {
-		return false
-	}
+	//if !DBExists() {
+	//	return false
+	//}
 	lastBlock, err := GetLastBlock()
 	bestHeight := 0
 	if err == nil {
 		bestHeight = lastBlock.Index
 	}
-	fmt.Println("bl index ", bl.Index)
 
 	if bl.Index > bestHeight {
 		db, _ := bolt.Open(dbFile, 0600, nil)
@@ -114,4 +113,9 @@ func DeserializeBlock(d []byte) *Block {
 	decoder := gob.NewDecoder(bytes.NewReader(d))
 	decoder.Decode(&block)
 	return &block
+}
+
+func (block *Block) String() string {
+	b, _ := json.Marshal(block)
+	return string(b)
 }

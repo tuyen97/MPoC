@@ -16,7 +16,8 @@ type Api struct {
 }
 
 type TXRequest struct {
-	Data string
+	Sender string
+	Data   string
 }
 
 type StakeRequest struct {
@@ -84,19 +85,19 @@ func (a *Api) StakeFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) IndexFunc(w http.ResponseWriter, r *http.Request) {
-	//var txr TXRequest
-	//decoder := json.NewDecoder(r.Body)
-	//err := decoder.Decode(&txr)
-	//if err != nil {
-	//	logger.Errorf("Cannot decode body")
-	//}
+	var txr TXRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&txr)
+	if err != nil {
+		api_logger.Error(err)
+	}
 	tx := Transaction{
 		ID:          nil,
-		Sender:      "",
+		Sender:      txr.Sender,
 		Type:        0,
 		StakeAmount: 0,
 		Candidate:   nil,
-		Data:        "txr.Data",
+		Data:        txr.Data,
 		Timestamp:   time.Now().UnixNano(),
 	}
 	tx.SetId()
@@ -108,10 +109,17 @@ func (api *Api) Start(port string) {
 	//log.SetAllLoggers(logging.INFO)
 	log.SetLogLevel("api", "info")
 	router := mux.NewRouter()
-	router.HandleFunc("/", api.IndexFunc).Methods("GET")
+	router.HandleFunc("/", api.IndexFunc).Methods("POST")
 	router.HandleFunc("/stake", api.StakeFunc).Methods("POST")
 	router.HandleFunc("/vote", api.VoteFunc).Methods("POST")
 	router.HandleFunc("/lastblock", api.GetLastBlock).Methods("GET")
 	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), router)
 	api_logger.Info("Server started")
 }
+
+//
+//func main()  {
+//	api:=Api{}
+//	api.Start("8000")
+//	select {}
+//}

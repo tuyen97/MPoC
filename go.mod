@@ -1,4 +1,4 @@
-module dpos
+module mdpos
 
 require (
 	github.com/boltdb/bolt v1.3.1
@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/ipfs/go-log v0.0.1
 	github.com/libp2p/go-libp2p v0.4.2
-	github.com/libp2p/go-libp2p-connmgr v0.2.1 // indirect
+	github.com/libp2p/go-libp2p-connmgr v0.2.1
 	github.com/libp2p/go-libp2p-core v0.3.0
 	github.com/libp2p/go-libp2p-pubsub v0.2.4
 	github.com/libp2p/go-libp2p-testing v0.1.1 // indirect

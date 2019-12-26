@@ -1,8 +1,6 @@
 package main
 
-import (
-	"os"
-)
+import "os"
 
 //<api_port> <peer_port> <address>
 func main() {
