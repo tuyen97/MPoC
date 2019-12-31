@@ -99,7 +99,7 @@ func (p *Peer) Start(port string) {
 	ctx := context.Background()
 	//new host
 	connMgr := connmgr.NewConnManager(4, 12, 1*time.Second)
-	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%s", port)), libp2p.ConnectionManager(connMgr))
+	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", peerIp,port)), libp2p.ConnectionManager(connMgr))
 	if err != nil {
 		logger.Error(err)
 	}
