@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/ipfs/go-log"
+	logrus "github.com/sirupsen/logrus"
 )
 
 type BlockFactory struct {
@@ -17,12 +19,12 @@ type BlockFactory struct {
 }
 
 var bfLogger = log.Logger("bf")
+var filename string = "logfile.log"
 var lastBlock Block
 
 const blockTime = int64(1 * time.Second)
 
 func (b *BlockFactory) ticker() {
-	fmt.Printf("b address %s\n", b.Address)
 	_, g := GetGenesis()
 	//sleep 5 block before start
 	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
@@ -107,6 +109,7 @@ func (b *BlockFactory) ServeInternal() {
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:
 			txs := make(map[string]*Transaction)
+			logrus.Infof("Got %d transaction\n", len(block.Txs))
 			for _, tx := range block.Txs {
 				txs[string(tx.ID)] = &tx
 			}
@@ -120,6 +123,14 @@ func (b *BlockFactory) init() {
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		// Cannot open log file. Logging to stderr
+		fmt.Println(err)
+	} else {
+		logrus.SetOutput(f)
+	}
+
 	logger.Infof("i am %s", b.Address)
 	b.init()
 	go b.ticker()
