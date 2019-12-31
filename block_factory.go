@@ -22,6 +22,7 @@ var lastBlock Block
 const blockTime = int64(1 * time.Second)
 
 func (b *BlockFactory) ticker() {
+	fmt.Printf("b address %s\n", b.Address)
 	_, g := GetGenesis()
 	//sleep 5 block before start
 	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
@@ -30,7 +31,7 @@ func (b *BlockFactory) ticker() {
 	for {
 		for now := range ticker.C {
 			//blockNo := (now.UnixNano() - g.Timestamp) / blockTime
-			currentSlot := (now.UnixNano() - g.Timestamp) % (3 * blockTime) / 1000000000
+			currentSlot := (now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
 			//bfLogger.Infof("Slot now: %d", int(currentSlot))
 			lastblock, err := GetLastBlock()
 			//am i the current bp?
