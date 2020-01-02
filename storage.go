@@ -22,7 +22,6 @@ func SqliteExists() bool {
 }
 
 func InitSqlite() *sqlite3.Conn {
-	log.Info("init sqlite")
 	// if !SqliteExists() {
 	conn, err := sqlite3.Open(sqliteFile)
 	if err != nil {

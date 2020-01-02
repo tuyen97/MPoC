@@ -144,7 +144,6 @@ func (b *BlockFactory) init() {
 	_, g := GetGenesis()
 	TopK = int64(len(g.BPs))
 	index = GetOrInitIndex()
-	blockTime = TopK * int64(time.Second)
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")

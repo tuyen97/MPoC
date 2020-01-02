@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 const logFileName string = "logfile.log"
 
 const dbFile = "blockchain.db"
@@ -10,7 +12,7 @@ const sqliteFile = ":memory:"
 
 var TopK int64
 
-var blockTime int64
+const blockTime = int64(1 * time.Second)
 
 const nCandidate = 50
 
