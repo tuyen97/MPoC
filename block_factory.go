@@ -20,29 +20,40 @@ type BlockFactory struct {
 
 var bfLogger = log.Logger("bf")
 var filename string = "logfile.log"
-var lastBlock Block
+var lastBlock *Block = nil
+var currentSlot int64
+var blockNo int64
+var index *Index
 
-const blockTime = int64(1 * time.Second)
+const blockTime = int64(3 * time.Second)
 
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
-	sinceGenesis := (time.Now().UnixNano()-g.Timestamp)%blockTime + 5*blockTime
+	sinceGenesis := blockTime - (time.Now().UnixNano()-g.Timestamp)%blockTime
+	bfLogger.Infof("Sleep %d", sinceGenesis)
 	time.Sleep(time.Duration(sinceGenesis))
-	ticker := time.NewTicker(time.Duration(1 * time.Second))
+	ticker := time.NewTicker(time.Duration(blockTime))
 	for {
 		for now := range ticker.C {
 			//blockNo := (now.UnixNano() - g.Timestamp) / blockTime
-			currentSlot := (now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
-			//bfLogger.Infof("Slot now: %d", int(currentSlot))
-			lastblock, err := GetLastBlock()
+			currentSlot = ((now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000) / TopK
+
+			blockNo = (time.Now().UnixNano() - g.Timestamp) / blockTime
+			// bfLogger.Infof("Current slot: %d", currentSlot)
+			bfLogger.Infof("Slot now: %d", int(currentSlot))
+			// lastblock, err := GetLastBlock()
 			//am i the current bp?
-			if err == nil {
-				if b.Address == lastblock.BPs[currentSlot] {
+			bfLogger.Infof("I am %s", b.Address)
+			if lastBlock != nil {
+				bfLogger.Info("last block ", lastBlock)
+				if b.Address == lastBlock.BPs[currentSlot] {
+					// bfLogger.Info("get lastblock")
 					b.BFMemChan <- true
 				}
 				//use initial bps
 			} else {
+				// bfLogger.Info("genesis ", g)
 				if b.Address == g.BPs[currentSlot] {
 					b.BFMemChan <- true
 				}
@@ -57,11 +68,9 @@ func (b *BlockFactory) ServeInternal() {
 		//gather txs to produce block
 		case txs := <-b.MemBFChan:
 			bfLogger.Infof("Got %d transaction", len(txs))
-			_, g := GetGenesis()
-			index := GetOrInitIndex()
 
-			blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
-			currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
+			// blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
+			// currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
 			var tnx []Transaction
 			for _, tx := range txs {
 				tnx = append(tnx, *tx)
@@ -69,7 +78,7 @@ func (b *BlockFactory) ServeInternal() {
 			}
 
 			var bps []string
-			bl, err := GetLastBlock()
+			// bl, err := GetLastBlock()
 			//end of epoch -> recalculate bps
 			fmt.Println("c:", currentSlot)
 			if currentSlot == 0 {
@@ -77,16 +86,18 @@ func (b *BlockFactory) ServeInternal() {
 				fmt.Println("top k:", topk)
 				bps = topk
 			} else {
-				if err != nil {
+				if lastBlock == nil {
 					bps = GetInitialBPs()
+				} else {
+					bps = lastBlock.BPs
 				}
 			}
 
 			var prevHash []byte
-			if err != nil {
+			if lastBlock == nil {
 				prevHash = []byte("genesis")
 			} else {
-				prevHash = bl.Hash
+				prevHash = lastBlock.Hash
 			}
 
 			block := Block{
@@ -98,21 +109,36 @@ func (b *BlockFactory) ServeInternal() {
 				Txs:       tnx,
 				BPs:       bps,
 			}
+			bfLogger.Info("Bps ", bps)
 			block.SetHash()
 			bfLogger.Infof("New block produced %d", int(block.Index))
 
 			//update database
 			index.Update(&block)
 
-			block.Save()
+			bfLogger.Info("replace last block")
+
+			lastBlock = &block
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:
 			txs := make(map[string]*Transaction)
-			logrus.Infof("Got %d transaction\n", len(block.Txs))
+			// logrus.Infof("Got %d transaction\n", len(block.Txs))
+			bfLogger.Infof("Got %d transaction", len(block.Txs))
 			for _, tx := range block.Txs {
 				txs[string(tx.ID)] = &tx
 			}
+			if lastBlock != nil {
+				if block.Index > lastBlock.Index {
+					index.Update(block)
+				}
+			} else {
+				index.Update(block)
+			}
+
+			bfLogger.Info("replace last block")
+			lastBlock = block
+			// block.Save()
 			b.ReturnBFMemChan <- txs
 		}
 	}
@@ -120,6 +146,7 @@ func (b *BlockFactory) ServeInternal() {
 func (b *BlockFactory) init() {
 	_, g := GetGenesis()
 	TopK = int64(len(g.BPs))
+	index = GetOrInitIndex()
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
@@ -131,7 +158,7 @@ func (b *BlockFactory) Start() {
 		logrus.SetOutput(f)
 	}
 
-	logger.Infof("i am %s", b.Address)
+	// logger.Infof("i am %s", b.Address)
 	b.init()
 	go b.ticker()
 	go b.ServeInternal()

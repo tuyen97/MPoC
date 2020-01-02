@@ -2,7 +2,7 @@ package main
 
 var TopK int64
 
-const nCandidate = 50
+const nCandidate = 4
 
 const peerIp = "0.0.0.0"
 

@@ -6,9 +6,11 @@ import (
 	"os"
 )
 
-const dbFile = "blockchain.db"
+var dbFile = "blockchain.db"
+
 const blocksBucket = "blockchain"
-const sqliteFile = "data.sqlite3"
+
+var sqliteFile = "data.sqlite3"
 
 func DBExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
