@@ -19,18 +19,15 @@ type BlockFactory struct {
 }
 
 var bfLogger = log.Logger("bf")
-var filename string = "logfile.log"
 var lastBlock *Block = nil
 var currentSlot int64
 var blockNo int64
 var index *Index
 
-const blockTime = int64(3 * time.Second)
-
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
-	sinceGenesis := blockTime - (time.Now().UnixNano()-g.Timestamp)%blockTime
+	sinceGenesis := blockTime - ((time.Now().UnixNano() - g.Timestamp) % blockTime)
 	bfLogger.Infof("Sleep %d", sinceGenesis)
 	time.Sleep(time.Duration(sinceGenesis))
 	ticker := time.NewTicker(time.Duration(blockTime))
@@ -41,12 +38,12 @@ func (b *BlockFactory) ticker() {
 
 			blockNo = (time.Now().UnixNano() - g.Timestamp) / blockTime
 			// bfLogger.Infof("Current slot: %d", currentSlot)
-			bfLogger.Infof("Slot now: %d", int(currentSlot))
+			// bfLogger.Infof("Slot now: %d", int(currentSlot))
 			// lastblock, err := GetLastBlock()
 			//am i the current bp?
-			bfLogger.Infof("I am %s", b.Address)
+			// bfLogger.Infof("I am %s", b.Address)
 			if lastBlock != nil {
-				bfLogger.Info("last block ", lastBlock)
+				// bfLogger.Info("last block ", lastBlock)
 				if b.Address == lastBlock.BPs[currentSlot] {
 					// bfLogger.Info("get lastblock")
 					b.BFMemChan <- true
@@ -116,14 +113,14 @@ func (b *BlockFactory) ServeInternal() {
 			//update database
 			index.Update(&block)
 
-			bfLogger.Info("replace last block")
+			// bfLogger.Info("replace last block")
 
 			lastBlock = &block
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 		case block := <-b.PeerBFChan:
 			txs := make(map[string]*Transaction)
-			// logrus.Infof("Got %d transaction\n", len(block.Txs))
+			logrus.Infof("Got %d transaction\n", len(block.Txs))
 			bfLogger.Infof("Got %d transaction", len(block.Txs))
 			for _, tx := range block.Txs {
 				txs[string(tx.ID)] = &tx
@@ -136,7 +133,7 @@ func (b *BlockFactory) ServeInternal() {
 				index.Update(block)
 			}
 
-			bfLogger.Info("replace last block")
+			// bfLogger.Info("replace last block")
 			lastBlock = block
 			// block.Save()
 			b.ReturnBFMemChan <- txs
@@ -147,10 +144,11 @@ func (b *BlockFactory) init() {
 	_, g := GetGenesis()
 	TopK = int64(len(g.BPs))
 	index = GetOrInitIndex()
+	blockTime = TopK * int64(time.Second)
 }
 func (b *BlockFactory) Start() {
 	log.SetLogLevel("bf", "info")
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	f, err := os.OpenFile(logFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		// Cannot open log file. Logging to stderr
 		fmt.Println(err)

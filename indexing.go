@@ -144,7 +144,7 @@ func (i *Index) ExecuteTransaction(tx *Transaction, epoch int) bool {
 		//add new vote
 		stake := i.GetStake(voter)
 		//log.SetFormatter(&log.TextFormatter{ForceColors: true})
-		indexLogger.Infof("%s stake %d", voter, stake)
+		// indexLogger.Infof("%s stake %d", voter, stake)
 		if stake < 0 {
 			return false
 		}
@@ -153,7 +153,7 @@ func (i *Index) ExecuteTransaction(tx *Transaction, epoch int) bool {
 			//_ = stmt.Exec(candidate, voter)
 			//_ = stmt.Reset()
 			stmt, _ = i.Conn.Prepare("INSERT INTO Vote VALUES (?,?,?)")
-			indexLogger.Infof("%s receive %d from %s", candidate, stake, voter)
+			// indexLogger.Infof("%s receive %d from %s", candidate, stake, voter)
 			_ = stmt.Exec(candidate, stake, voter)
 			_ = stmt.Reset()
 
