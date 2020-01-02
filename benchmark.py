@@ -18,7 +18,7 @@ if __name__ == "__main__":
     wrk_folder = sys.argv[1]
     # command=['pwd', 'pwd', 'pwd']
     # print(command)
-    path_wrk = '/home/bkc_3/Desktop/wrk/wrk'
+    path_wrk = '{}/wrk'.format(wrk_folder)
     destination_ip = '127.0.0.1'
 
     start_time = time.time()
