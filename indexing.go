@@ -450,7 +450,7 @@ func (i *Index) GetTopKBP(k int) []string {
 		}
 		bps = append(bps, candidate)
 		count++
-		if count == 3 {
+		if count == k {
 			break
 		}
 	}

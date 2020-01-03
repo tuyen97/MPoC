@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/ipfs/go-log"
@@ -24,6 +25,9 @@ var currentSlot int64
 var blockNo int64
 var index *Index
 
+//only store tx when isLeader = true
+var isLeader bool = false
+
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
@@ -34,23 +38,44 @@ func (b *BlockFactory) ticker() {
 	for {
 		for now := range ticker.C {
 			//blockNo := (now.UnixNano() - g.Timestamp) / blockTime
-			currentSlot = ((now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000) / TopK
+			currentSlot = (now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
 
 			blockNo = (time.Now().UnixNano() - g.Timestamp) / blockTime
 			// bfLogger.Infof("Current slot: %d", currentSlot)
-			// bfLogger.Infof("Slot now: %d", int(currentSlot))
+			if i, _ := strconv.Atoi(b.Address); i < 21 {
+				bfLogger.Infof("Slot now: %d", int(currentSlot))
+			}
+
 			// lastblock, err := GetLastBlock()
 			//am i the current bp?
 			// bfLogger.Infof("I am %s", b.Address)
 			if lastBlock != nil {
 				// bfLogger.Info("last block ", lastBlock)
+				if SliceExists(lastBlock.BPs, b.Address) {
+					lock.Lock()
+					isLeader = true
+					lock.Unlock()
+				} else {
+					lock.Lock()
+					isLeader = false
+					lock.Unlock()
+				}
 				if b.Address == lastBlock.BPs[currentSlot] {
-					// bfLogger.Info("get lastblock")
+					bfLogger.Infof("I am %s", b.Address)
 					b.BFMemChan <- true
 				}
 				//use initial bps
 			} else {
 				// bfLogger.Info("genesis ", g)
+				if SliceExists(g.BPs, b.Address) {
+					lock.Lock()
+					isLeader = true
+					lock.Unlock()
+				} else {
+					lock.Lock()
+					isLeader = false
+					lock.Unlock()
+				}
 				if b.Address == g.BPs[currentSlot] {
 					b.BFMemChan <- true
 				}
@@ -64,7 +89,7 @@ func (b *BlockFactory) ServeInternal() {
 		select {
 		//gather txs to produce block
 		case txs := <-b.MemBFChan:
-			bfLogger.Infof("Got %d transaction", len(txs))
+			//bfLogger.Infof("Got %d transaction", len(txs))
 
 			// blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
 			// currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
@@ -77,10 +102,10 @@ func (b *BlockFactory) ServeInternal() {
 			var bps []string
 			// bl, err := GetLastBlock()
 			//end of epoch -> recalculate bps
-			fmt.Println("c:", currentSlot)
+			fmt.Printf("for: %d\n", currentSlot)
 			if currentSlot == 0 {
 				topk := index.GetTopKBP(int(TopK))
-				fmt.Println("top k:", topk)
+				bfLogger.Infof("top k: %s", topk)
 				bps = topk
 			} else {
 				if lastBlock == nil {
@@ -106,22 +131,21 @@ func (b *BlockFactory) ServeInternal() {
 				Txs:       tnx,
 				BPs:       bps,
 			}
-			bfLogger.Info("Bps ", bps)
+			//bfLogger.Info("Bps ", bps)
 			block.SetHash()
-			bfLogger.Infof("New block produced %d", int(block.Index))
+			//bfLogger.Infof("New block produced %d", int(block.Index))
 
 			//update database
 			index.Update(&block)
 
-			// bfLogger.Info("replace last block")
-
+			//bfLogger.Info("replace last block")
 			lastBlock = &block
-			b.ReturnBFMemChan <- txs
-			b.BFPeerChan <- &block
+			go func() { b.ReturnBFMemChan <- txs }()
+			go func() { b.BFPeerChan <- &block }()
 		case block := <-b.PeerBFChan:
 			txs := make(map[string]*Transaction)
-			logrus.Infof("Got %d transaction\n", len(block.Txs))
-			bfLogger.Infof("Got %d transaction", len(block.Txs))
+			//logrus.Infof("Got %d transaction, bps: %s", len(block.Txs), block.BPs)
+			// bfLogger.Infof("Got %d transaction", len(block.Txs))
 			for _, tx := range block.Txs {
 				txs[string(tx.ID)] = &tx
 			}
@@ -132,8 +156,7 @@ func (b *BlockFactory) ServeInternal() {
 			} else {
 				index.Update(block)
 			}
-
-			// bfLogger.Info("replace last block")
+			//bfLogger.Info("replace last block")
 			lastBlock = block
 			// block.Save()
 			b.ReturnBFMemChan <- txs

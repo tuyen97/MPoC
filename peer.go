@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	yamux "github.com/libp2p/go-libp2p-yamux"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
 	"time"
 )
@@ -88,7 +89,7 @@ func (p *Peer) handleIncomingBlock(sub *pubsub.Subscription, ctx context.Context
 			panic(err)
 		}
 		block := DeserializeBlock(msg.GetData())
-		logger.Info("Receive block")
+		// logger.Info("Receive block")
 		p.PeerBFBlockChan <- block
 	}
 }
@@ -99,7 +100,12 @@ func (p *Peer) Start(port string) {
 	ctx := context.Background()
 	//new host
 	connMgr := connmgr.NewConnManager(4, 12, 1*time.Second)
-	host, err := libp2p.New(ctx, libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", peerIp,port)), libp2p.ConnectionManager(connMgr))
+	host, err := libp2p.New(
+		ctx,
+		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", peerIp, port)),
+		libp2p.ConnectionManager(connMgr),
+		libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport),
+	)
 	if err != nil {
 		logger.Error(err)
 	}
