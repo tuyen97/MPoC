@@ -6,11 +6,10 @@ import (
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
-	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	yamux "github.com/libp2p/go-libp2p-yamux"
-	"github.com/libp2p/go-libp2p/p2p/discovery"
+	"github.com/multiformats/go-multiaddr"
 	"time"
 )
 
@@ -86,7 +85,8 @@ func (p *Peer) handleIncomingBlock(sub *pubsub.Subscription, ctx context.Context
 		msg, err := sub.Next(ctx)
 		if err != nil {
 			//fmt.Println("Error (sub.Next): %v", err)
-			panic(err)
+			logger.Error(err)
+			continue
 		}
 		block := DeserializeBlock(msg.GetData())
 		// logger.Info("Receive block")
@@ -109,27 +109,21 @@ func (p *Peer) Start(port string) {
 	if err != nil {
 		logger.Error(err)
 	}
-	logger.Info("i am ", host.Addrs())
+	logger.Infof("i am /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().Pretty())
+	err = RegisterAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID()))
+	if err != nil {
+		logger.Error(err)
+	}
+	pe := QueryDns()
 
-	//new mdns
-	service, err := discovery.NewMdnsService(ctx, host, 2*time.Second, "test")
-	peerchan := make(chan peer.AddrInfo)
-
-	//register notifiee
-	service.RegisterNotifee(&DiscoveryNotifiee{peerchan: peerchan})
-	go func() {
-		for {
-			select {
-			case addrinfo := <-peerchan:
-				if host.Network().Connectedness(addrinfo.ID) != network.Connected {
-					if err := host.Connect(ctx, addrinfo); err != nil {
-						logger.Error("Connection failed:", err)
-					}
-				}
-			}
+	logger.Infof("Found %s ", pe.Infos)
+	for _, pr := range pe.Infos {
+		ma, _ := multiaddr.NewMultiaddr(pr)
+		info, _ := peer.AddrInfoFromP2pAddr(ma)
+		if err := host.Connect(ctx, *info); err != nil {
+			logger.Error("Connection failed:", err)
 		}
-	}()
-
+	}
 	//new pubsub
 	ps, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {

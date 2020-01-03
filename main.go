@@ -4,8 +4,14 @@ import "os"
 
 //<api_port> <peer_port> <address>
 func main() {
-	node := Node{}
-	node.Init(os.Args[3])
-	node.Start(os.Args[1], os.Args[2])
+	flagDns := os.Args[1]
+	if flagDns == "1" {
+		s := Server{}
+		s.Start()
+	} else {
+		node := Node{}
+		node.Init(os.Args[4])
+		node.Start(os.Args[2], os.Args[3])
+	}
 	select {}
 }

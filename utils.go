@@ -36,6 +36,5 @@ func SliceExists(slice interface{}, item interface{}) bool {
 			return true
 		}
 	}
-
 	return false
 }

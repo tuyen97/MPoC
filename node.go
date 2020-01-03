@@ -24,10 +24,10 @@ func (node *Node) Start(api, peer string) {
 
 func (node *Node) Init(addr string) {
 
-	memPeerTxChan := make(chan *Transaction)
-	peerMemTxChan := make(chan *Transaction)
-	bfPeerChan := make(chan *Block)
-	peerBfBlockChan := make(chan *Block)
+	memPeerTxChan := make(chan *Transaction, 10)
+	peerMemTxChan := make(chan *Transaction, 10)
+	bfPeerChan := make(chan *Block, 10)
+	peerBfBlockChan := make(chan *Block, 10)
 	peer := Peer{
 		MemPeerTxChan:   memPeerTxChan,
 		PeerMemTxChan:   peerMemTxChan,
@@ -36,7 +36,7 @@ func (node *Node) Init(addr string) {
 	}
 	node.peer = peer
 
-	apiMemTxChan := make(chan *Transaction)
+	apiMemTxChan := make(chan *Transaction, 10)
 	api := Api{memTxChan: apiMemTxChan}
 	node.api = api
 
