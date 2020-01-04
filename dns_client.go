@@ -16,7 +16,7 @@ func RegisterAddr(addr string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(fmt.Sprintf("http://%s:8000/register", dnsServer), "application/json", bytes.NewBuffer(req))
+	resp, err := http.Post(fmt.Sprintf("http://%s:13000/register", dnsServer), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func RegisterAddr(addr string) error {
 	return nil
 }
 func QueryDns() Peers {
-	resp, err := http.Get(fmt.Sprintf("http://%s:8000/query", dnsServer))
+	resp, err := http.Get(fmt.Sprintf("http://%s:13000/query", dnsServer))
 	if err != nil {
 		log.Fatal(err)
 	}

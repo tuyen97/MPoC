@@ -61,8 +61,8 @@ func (b *BlockFactory) ticker() {
 					lock.Unlock()
 				}
 				if b.Address == lastBlock.BPs[currentSlot] {
-					bfLogger.Infof("I am %s", b.Address)
 					b.BFMemChan <- true
+					bfLogger.Infof("I am %s", b.Address)
 				}
 				//use initial bps
 			} else {
@@ -88,8 +88,10 @@ func (b *BlockFactory) ServeInternal() {
 	for {
 		select {
 		//gather txs to produce block
-		case txs := <-b.MemBFChan:
-			//bfLogger.Infof("Got %d transaction", len(txs))
+		case txs, ok := <-b.MemBFChan:
+			if !ok {
+				bfLogger.Info("Channel closed")
+			}
 
 			// blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
 			// currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
@@ -133,18 +135,19 @@ func (b *BlockFactory) ServeInternal() {
 			}
 			//bfLogger.Info("Bps ", bps)
 			block.SetHash()
-			//bfLogger.Infof("New block produced %d", int(block.Index))
+			bfLogger.Infof("New block produced %d", int(block.Index))
 
 			//update database
 			index.Update(&block)
 
-			//bfLogger.Info("replace last block")
+			bfLogger.Info("replace last block")
 			lastBlock = &block
-			go func() { b.ReturnBFMemChan <- txs }()
-			go func() { b.BFPeerChan <- &block }()
+			b.ReturnBFMemChan <- txs
+			b.BFPeerChan <- &block
+			bfLogger.Info("done pr")
 		case block := <-b.PeerBFChan:
 			txs := make(map[string]*Transaction)
-			//logrus.Infof("Got %d transaction, bps: %s", len(block.Txs), block.BPs)
+			logrus.Infof("Got %d transaction, bps: %s", len(block.Txs), block.BPs)
 			// bfLogger.Infof("Got %d transaction", len(block.Txs))
 			for _, tx := range block.Txs {
 				txs[string(tx.ID)] = &tx

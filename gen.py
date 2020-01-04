@@ -27,7 +27,7 @@ def genDockerCompose():
             w.write("    network_mode: host\n")
             w.write("    ports:\n")
             w.write("      - "+str(8000+j)+":8000\n")
-            w.write("    command: ./mdpos {} {} {}\n".format(8000+j, 9000+j, j))
+            w.write("    command: ./mdpos 0 {} {} {}\n".format(8000+j, 9000+j, j))
             w.write("    hostname: node_"+str(j)+"\n")
             # w.write("\t\tnetwork_mode: \"host\"\n")
         w.close()

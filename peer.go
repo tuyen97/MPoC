@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	yamux "github.com/libp2p/go-libp2p-yamux"
 	"github.com/multiformats/go-multiaddr"
-	"time"
 )
 
 var logger = log.Logger("peer")
@@ -89,7 +89,7 @@ func (p *Peer) handleIncomingBlock(sub *pubsub.Subscription, ctx context.Context
 			continue
 		}
 		block := DeserializeBlock(msg.GetData())
-		// logger.Info("Receive block")
+		//logger.Info("Receive block")
 		p.PeerBFBlockChan <- block
 	}
 }
@@ -104,25 +104,10 @@ func (p *Peer) Start(port string) {
 		ctx,
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", peerIp, port)),
 		libp2p.ConnectionManager(connMgr),
-		libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport),
+		// libp2p.Muxer("/yamux/1.0.0", yamux.DefaultTransport),
 	)
 	if err != nil {
 		logger.Error(err)
-	}
-	logger.Infof("i am /ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID().Pretty())
-	err = RegisterAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%v/p2p/%s", port, host.ID()))
-	if err != nil {
-		logger.Error(err)
-	}
-	pe := QueryDns()
-
-	logger.Infof("Found %s ", pe.Infos)
-	for _, pr := range pe.Infos {
-		ma, _ := multiaddr.NewMultiaddr(pr)
-		info, _ := peer.AddrInfoFromP2pAddr(ma)
-		if err := host.Connect(ctx, *info); err != nil {
-			logger.Error("Connection failed:", err)
-		}
 	}
 	//new pubsub
 	ps, err := pubsub.NewGossipSub(ctx, host)
@@ -137,9 +122,35 @@ func (p *Peer) Start(port string) {
 	blockTopic := RegisterTopic(ps, ctx, "block", p.handleIncomingBlock)
 	pub["block"] = blockTopic
 
+	//query from dns
+	logger.Infof("i am /ip4/%s/tcp/%v/p2p/%s", peerIp, port, host.ID().Pretty())
+	pe := QueryDns()
+
+	logger.Infof("Found %s ", pe.Infos)
+	for _, pr := range pe.Infos {
+		ma, _ := multiaddr.NewMultiaddr(pr)
+		info, _ := peer.AddrInfoFromP2pAddr(ma)
+		err := host.Connect(ctx, *info)
+		if err != nil {
+			logger.Error("Connection failed:", err)
+		} else {
+			logger.Info("Connect success")
+		}
+	}
+	//advertise itself
+	err = RegisterAddr(fmt.Sprintf("/ip4/%s/tcp/%v/p2p/%s", peerIp, port, host.ID()))
+	if err != nil {
+		logger.Error(err)
+	}
 	//serve other component in node
 	p.ServeInternal(pub, ctx)
 
+	//go func() {
+	//	for {
+	//		fmt.Printf("peer store: %s\n", ps.ListPeers("tx"))
+	//		time.Sleep(1 * time.Second)
+	//	}
+	//}()
 	logger.Info("Peer started")
 }
 

@@ -417,10 +417,6 @@ func (i *Index) GetTopNCandidate() []string {
 			break
 		}
 	}
-	//not enough vote, use initial setup
-	if len(topK) < nCandidate {
-		return []string{}
-	}
 	return topK
 
 }
@@ -428,13 +424,14 @@ func (i *Index) GetTopNCandidate() []string {
 func (i *Index) GetTopKBP(k int) []string {
 	//get top n candidate
 	candidates := i.GetTopNCandidate()
+	indexLogger.Infof("Got %d top active %s", len(candidates), candidates)
 	if len(candidates) < nCandidate {
 		return GetInitialBPs()
 	}
 	var bps []Candidate
 	count := 0
 	for _, addr := range candidates {
-		indexLogger.Infof("Calc %s", addr)
+		//indexLogger.Infof("Calc %s", addr)
 		totalVote := i.GetTotalVote(addr)
 		numberVote := i.GetNumberOfVote(addr)
 		txInLastEpoch := i.GetTXLastEpoch(addr)

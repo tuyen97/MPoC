@@ -46,6 +46,6 @@ func (s *Server) Start() {
 	router := mux.NewRouter()
 	router.HandleFunc("/register", handleRegister).Methods("POST")
 	router.HandleFunc("/query", handleQuery)
-	go http.ListenAndServe("0.0.0.0:8000", router)
+	go http.ListenAndServe("0.0.0.0:13000", router)
 	fmt.Println("server started")
 }

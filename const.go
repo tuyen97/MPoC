@@ -25,4 +25,4 @@ const peerIp = "127.0.0.1"
 
 var parameter = []float64{1.0, 1.0, 1.0, 1.0, 1.0}
 
-const dnsServer = "localhost"
+const dnsServer = "127.0.0.1"

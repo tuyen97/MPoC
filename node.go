@@ -24,10 +24,10 @@ func (node *Node) Start(api, peer string) {
 
 func (node *Node) Init(addr string) {
 
-	memPeerTxChan := make(chan *Transaction, 10)
-	peerMemTxChan := make(chan *Transaction, 10)
-	bfPeerChan := make(chan *Block, 10)
-	peerBfBlockChan := make(chan *Block, 10)
+	memPeerTxChan := make(chan *Transaction, 1000)
+	peerMemTxChan := make(chan *Transaction, 1000)
+	bfPeerChan := make(chan *Block, 1000)
+	peerBfBlockChan := make(chan *Block, 1000)
 	peer := Peer{
 		MemPeerTxChan:   memPeerTxChan,
 		PeerMemTxChan:   peerMemTxChan,
@@ -36,14 +36,14 @@ func (node *Node) Init(addr string) {
 	}
 	node.peer = peer
 
-	apiMemTxChan := make(chan *Transaction, 10)
+	apiMemTxChan := make(chan *Transaction, 1000)
 	api := Api{memTxChan: apiMemTxChan}
 	node.api = api
 
-	txPool := make(map[string]*Transaction)
+	txPool := Pool{Data: make(map[string]*Transaction)}
 	bfMemChan := make(chan bool)
-	memBfChan := make(chan map[string]*Transaction)
-	returnMemBFChan := make(chan map[string]*Transaction)
+	memBfChan := make(chan map[string]*Transaction, 100)
+	returnMemBFChan := make(chan map[string]*Transaction, 100)
 	mem := MemPool{
 		TXPool:          txPool,
 		ApiMemTxChan:    apiMemTxChan,

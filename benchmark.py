@@ -19,18 +19,18 @@ if __name__ == "__main__":
     # command=['pwd', 'pwd', 'pwd']
     # print(command)
     path_wrk = '{}/wrk'.format(wrk_folder)
-    destination_ip = '127.0.0.1'
+    destination_ip = 'localhost'
 
     start_time = time.time()
     print(start_time)
     command_round = []
     for i in range(10):
         _command_round = []
-        for j in range(70):
+        for j in range(4):
             destimation_port = 8000 + j
             time_benchwrk = random.choice(range(20))
-            _command = ' -t12 -c400 -d{}s -s {}/post_{}.lua  http://{}:{}'\
-                .format(time_benchwrk, wrk_folder, j, destination_ip, destimation_port)
+            _command = '{} -t12 -c400 -d{}s -s {}/scripts/post_lua/post_{}.lua  http://{}:{}'\
+                .format(path_wrk, time_benchwrk, wrk_folder, j, destination_ip, destimation_port)
             _command_round.append(_command)
         command_round.append(_command_round)
 
