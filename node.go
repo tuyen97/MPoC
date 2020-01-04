@@ -42,8 +42,8 @@ func (node *Node) Init(addr string) {
 
 	txPool := Pool{Data: make(map[string]*Transaction)}
 	bfMemChan := make(chan bool)
-	memBfChan := make(chan map[string]*Transaction, 100)
-	returnMemBFChan := make(chan map[string]*Transaction, 100)
+	memBfChan := make(chan map[string]*Transaction, 1000)
+	returnMemBFChan := make(chan map[string]*Transaction, 1000)
 	mem := MemPool{
 		TXPool:          txPool,
 		ApiMemTxChan:    apiMemTxChan,

@@ -36,7 +36,6 @@ func (a *Api) GetLastBlock(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprint(w, lastBlock)
 	}
-
 }
 
 func (a *Api) VoteFunc(w http.ResponseWriter, r *http.Request) {
