@@ -31,10 +31,10 @@ type VoteRequest struct {
 }
 
 func (a *Api) GetLastBlock(w http.ResponseWriter, r *http.Request) {
-	if lastBlock == nil {
+	if GetLastBlock() == nil {
 		fmt.Fprintf(w, "cannot get last block")
 	} else {
-		fmt.Fprint(w, lastBlock)
+		fmt.Fprint(w, GetLastBlock())
 	}
 }
 

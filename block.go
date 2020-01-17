@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/json"
-	"errors"
-	"github.com/boltdb/bolt"
 	"log"
 	"strconv"
 )
@@ -17,7 +15,7 @@ type Block struct {
 	Index     int
 	Timestamp int64
 	Creator   string
-	Txs       []Transaction
+	Txs       []*Transaction
 	BPs       []string
 }
 
@@ -57,55 +55,34 @@ func (b *Block) Serialize() []byte {
 	return result.Bytes()
 }
 
-func (bl *Block) Save() bool {
-	//if !DBExists() {
-	//	return false
-	//}
-	lastBlock, err := GetLastBlock()
-	bestHeight := 0
-	if err == nil {
-		bestHeight = lastBlock.Index
-	}
-
-	if bl.Index > bestHeight {
-		db, _ := bolt.Open(dbFile, 0600, nil)
-		defer db.Close()
-		_ = db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(blocksBucket))
-			if b == nil {
-				b, _ = tx.CreateBucket([]byte(blocksBucket))
-			}
-			_ = b.Put(bl.Hash, bl.Serialize())
-			_ = b.Put([]byte("l"), bl.Hash)
-			return nil
-		})
-		return true
-	}
-
-	return false
-}
-
 //
-func GetLastBlock() (*Block, error) {
-	if !DBExists() {
-		return &Block{}, errors.New("Blockchain empty")
-	}
-	db, _ := bolt.Open(dbFile, 0600, nil)
-	defer db.Close()
-	var block *Block
-
-	_ = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		hash := b.Get([]byte("l"))
-		data := b.Get(hash)
-		block = DeserializeBlock(data)
-		return nil
-	})
-	if len(block.BPs) == 0 {
-		return &Block{}, errors.New("Blockchain empty")
-	}
-	return block, nil
-}
+//func (bl *Block) Save() bool {
+//	//if !DBExists() {
+//	//	return false
+//	//}
+//	lastBlock, err := GetLastBlock()
+//	bestHeight := 0
+//	if err == nil {
+//		bestHeight = lastBlock.Index
+//	}
+//
+//	if bl.Index > bestHeight {
+//		db, _ := bolt.Open(dbFile, 0600, nil)
+//		defer db.Close()
+//		_ = db.Update(func(tx *bolt.Tx) error {
+//			b := tx.Bucket([]byte(blocksBucket))
+//			if b == nil {
+//				b, _ = tx.CreateBucket([]byte(blocksBucket))
+//			}
+//			_ = b.Put(bl.Hash, bl.Serialize())
+//			_ = b.Put([]byte("l"), bl.Hash)
+//			return nil
+//		})
+//		return true
+//	}
+//
+//	return false
+//}
 
 //DeserializeBlock deserialize block from byte array
 func DeserializeBlock(d []byte) *Block {

@@ -15,52 +15,46 @@ type BlockFactory struct {
 	PeerBFChan      chan *Block
 	BFPeerChan      chan *Block
 	BFMemChan       chan bool
-	MemBFChan       chan map[string]*Transaction
-	ReturnBFMemChan chan map[string]*Transaction
+	MemBFChan       chan []*Transaction
+	ReturnBFMemChan chan []*Transaction
 }
 
 var bfLogger = log.Logger("bf")
-var lastBlock *Block = nil
-var currentSlot int64
-var blockNo int64
+
 var index *Index
 
 //only store tx when isLeader = true
-var isLeader bool = false
 
 func (b *BlockFactory) ticker() {
 	_, g := GetGenesis()
 	//sleep 5 block before start
-	sinceGenesis := blockTime - ((time.Now().UnixNano() - g.Timestamp) % blockTime)
+	sinceGenesis := 5*blockTime - ((time.Now().UnixNano() - g.Timestamp) % blockTime)
 	bfLogger.Infof("Sleep %d", sinceGenesis)
 	time.Sleep(time.Duration(sinceGenesis))
 	ticker := time.NewTicker(time.Duration(blockTime))
 	for {
 		for now := range ticker.C {
 			//blockNo := (now.UnixNano() - g.Timestamp) / blockTime
-			currentSlot = (now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
+			UpdateCurrentSlot((now.UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000)
 
-			blockNo = (time.Now().UnixNano() - g.Timestamp) / blockTime
+			UpdateBlockNo((time.Now().UnixNano() - g.Timestamp) / blockTime)
 			// bfLogger.Infof("Current slot: %d", currentSlot)
 			if i, _ := strconv.Atoi(b.Address); i < 21 {
-				bfLogger.Infof("Slot now: %d", int(currentSlot))
+				bfLogger.Infof("Slot now: %d", int(GetCurrentSlot()))
+
 			}
 
 			// lastblock, err := GetLastBlock()
 			//am i the current bp?
 			// bfLogger.Infof("I am %s", b.Address)
-			if lastBlock != nil {
+			if GetLastBlock() != nil {
 				// bfLogger.Info("last block ", lastBlock)
-				if SliceExists(lastBlock.BPs, b.Address) {
-					lock.Lock()
-					isLeader = true
-					lock.Unlock()
+				if SliceExists(GetLastBlock().BPs, b.Address) {
+					UpdateIsLeader(true)
 				} else {
-					lock.Lock()
-					isLeader = false
-					lock.Unlock()
+					UpdateIsLeader(false)
 				}
-				if b.Address == lastBlock.BPs[currentSlot] {
+				if b.Address == GetLastBlock().BPs[GetCurrentSlot()] {
 					b.BFMemChan <- true
 					bfLogger.Infof("I am %s", b.Address)
 				}
@@ -68,15 +62,11 @@ func (b *BlockFactory) ticker() {
 			} else {
 				// bfLogger.Info("genesis ", g)
 				if SliceExists(g.BPs, b.Address) {
-					lock.Lock()
-					isLeader = true
-					lock.Unlock()
+					UpdateIsLeader(true)
 				} else {
-					lock.Lock()
-					isLeader = false
-					lock.Unlock()
+					UpdateIsLeader(false)
 				}
-				if b.Address == g.BPs[currentSlot] {
+				if b.Address == g.BPs[GetCurrentSlot()] {
 					b.BFMemChan <- true
 				}
 			}
@@ -91,39 +81,39 @@ func (b *BlockFactory) ServeInternal() {
 		case txs := <-b.MemBFChan:
 			// blockNo := (time.Now().UnixNano() - g.Timestamp) / blockTime
 			// currentSlot := (time.Now().UnixNano() - g.Timestamp) % (TopK * blockTime) / 1000000000
-			var tnx []Transaction
+			var tnx []*Transaction
 			for _, tx := range txs {
-				tnx = append(tnx, *tx)
+				tnx = append(tnx, tx)
 
 			}
 
 			var bps []string
 			// bl, err := GetLastBlock()
 			//end of epoch -> recalculate bps
-			fmt.Printf("for: %d\n", currentSlot)
-			if currentSlot == 0 {
+			bfLogger.Infof("for: %d\n", GetCurrentSlot())
+			if GetCurrentSlot() == 0 {
 				topk := index.GetTopKVote(int(TopK))
 				bfLogger.Infof("top k: %s", topk)
 				bps = topk
 			} else {
-				if lastBlock == nil {
+				if GetLastBlock() == nil {
 					bps = GetInitialBPs()
 				} else {
-					bps = lastBlock.BPs
+					bps = GetLastBlock().BPs
 				}
 			}
 
 			var prevHash []byte
-			if lastBlock == nil {
+			if GetLastBlock() == nil {
 				prevHash = []byte("genesis")
 			} else {
-				prevHash = lastBlock.Hash
+				prevHash = GetLastBlock().Hash
 			}
 
 			block := Block{
 				Hash:      nil,
 				PrevHash:  prevHash,
-				Index:     int(blockNo),
+				Index:     int(GetBlockNo()),
 				Timestamp: time.Now().UnixNano(),
 				Creator:   b.Address,
 				Txs:       tnx,
@@ -137,28 +127,24 @@ func (b *BlockFactory) ServeInternal() {
 			index.Update(&block)
 
 			// bfLogger.Info("replace last block")
-			lastBlock = &block
+			UpdateLastBlock(&block)
 			b.ReturnBFMemChan <- txs
 			b.BFPeerChan <- &block
 			bfLogger.Info("done pr")
 		case block := <-b.PeerBFChan:
-			txs := make(map[string]*Transaction)
 			logrus.Infof("Got %d transaction, timestamp: %d", len(block.Txs), block.Timestamp)
 			// bfLogger.Infof("Got %d transaction", len(block.Txs))
-			for _, tx := range block.Txs {
-				txs[string(tx.ID)] = &tx
-			}
-			if lastBlock != nil {
-				if block.Index > lastBlock.Index {
+			if GetLastBlock() != nil {
+				if block.Index > GetLastBlock().Index {
 					index.Update(block)
 				}
 			} else {
 				index.Update(block)
 			}
 			//bfLogger.Info("replace last block")
-			lastBlock = block
+			UpdateLastBlock(block)
 			// block.Save()
-			b.ReturnBFMemChan <- txs
+			b.ReturnBFMemChan <- block.Txs
 		}
 	}
 }

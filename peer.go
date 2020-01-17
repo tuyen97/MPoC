@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/ipfs/go-log"
@@ -127,7 +128,16 @@ func (p *Peer) Start(port string) {
 	pe := QueryDns()
 
 	logger.Infof("Found %s ", pe.Infos)
-	for _, pr := range pe.Infos {
+
+	infos := pe.Infos
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(infos), func(i, j int) { infos[i], infos[j] = infos[j], infos[i] })
+
+	count := 0
+	for _, pr := range infos {
+		if count == 5 {
+			break
+		}
 		ma, _ := multiaddr.NewMultiaddr(pr)
 		info, _ := peer.AddrInfoFromP2pAddr(ma)
 		err := host.Connect(ctx, *info)
@@ -136,6 +146,7 @@ func (p *Peer) Start(port string) {
 		} else {
 			logger.Info("Connect success")
 		}
+		count++
 	}
 	//advertise itself
 	err = RegisterAddr(fmt.Sprintf("/ip4/%s/tcp/%v/p2p/%s", peerIp, port, host.ID()))

@@ -19,7 +19,7 @@ var TopK int64
 
 const blockTime = int64(1 * time.Second)
 
-const nCandidate = 125
+const nCandidate = 75
 
 const peerIp = "127.0.0.1"
 

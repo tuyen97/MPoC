@@ -6,17 +6,17 @@ import (
 )
 
 type MemPool struct {
-	ApiMemTxChan    chan *Transaction            // api -> mem: transaction receive from api
-	MemPeerTxChan   chan *Transaction            // mem -> peer: broadcast
-	PeerMemTx       chan *Transaction            // peer -> mem: tx received
-	BFMemChan       chan bool                    //BlockFactory -> mem : notify chan
-	MemBFChan       chan map[string]*Transaction //mem -> BlockFactory: tx to forge block
-	ReturnMemBFChan chan map[string]*Transaction //bf->mem : delete tx that is added in block
-	IncomingBlock   chan *Block                  //block receive from
-	TXPool          Pool
+	ApiMemTxChan    chan *Transaction   // api -> mem: transaction receive from api
+	MemPeerTxChan   chan *Transaction   // mem -> peer: broadcast
+	PeerMemTx       chan *Transaction   // peer -> mem: tx received
+	BFMemChan       chan bool           //BlockFactory -> mem : notify chan
+	MemBFChan       chan []*Transaction //mem -> BlockFactory: tx to forge block
+	ReturnMemBFChan chan []*Transaction //bf->mem : delete tx that is added in block
+	IncomingBlock   chan *Block         //block receive from
+	TXPool          map[string]*Transaction
 }
 type Pool struct {
-	sync.RWMutex
+	sync.Mutex
 	Data map[string]*Transaction
 }
 
@@ -42,51 +42,34 @@ func (m *MemPool) Start() {
 			case tx := <-m.ApiMemTxChan:
 				//memLogger.Infof("receive tx %s  from api", tx)
 				m.MemPeerTxChan <- tx
-				lock.RLock()
-				if isLeader {
-					m.TXPool.Lock()
-					if m.TXPool.Data[string(tx.ID)] == nil {
-						m.TXPool.Data[string(tx.ID)] = tx
+				if GetIsLeader() {
+					if m.TXPool[string(tx.ID)] == nil {
+						m.TXPool[string(tx.ID)] = tx
 					}
-					m.TXPool.Unlock()
 				}
-				lock.RUnlock()
 			case tx := <-m.PeerMemTx:
 				//memLogger.Info("receive from peer")
-				lock.RLock()
-				if isLeader {
-					m.TXPool.Lock()
-					if m.TXPool.Data[string(tx.ID)] == nil {
-						//memLogger.Infof("add tx : %s", tx)
-						m.TXPool.Data[string(tx.ID)] = tx
+				if GetIsLeader() {
+					if m.TXPool[string(tx.ID)] == nil {
+						m.TXPool[string(tx.ID)] = tx
 					}
-					m.TXPool.Unlock()
 				}
-				lock.RUnlock()
 			case <-m.BFMemChan:
 				memLogger.Info("Receive signal from bf")
-				m.TXPool.RLock()
 				//m.MemBFChan <- m.TXPool.Data
-				data := make(map[string]*Transaction)
-				for key, value := range m.TXPool.Data {
-					data[key] = value
+				var data []*Transaction
+				for _, value := range m.TXPool {
+					data = append(data, value)
 				}
 				memLogger.Info("Push to BF")
-				select {
-				case m.MemBFChan <- data:
-					memLogger.Info("Push to BF done")
-				default:
-					memLogger.Info("Can't push to BF")
-				}
-				m.TXPool.RUnlock()
+				m.MemBFChan <- data
+				memLogger.Info("Push to BF done")
 				memLogger.Info("done signal from bf")
 			case txs := <-m.ReturnMemBFChan:
 				//memLogger.Info("Receive tx from bf")
-				m.TXPool.Lock()
-				for key, _ := range txs {
-					delete(m.TXPool.Data, key)
+				for _, tx := range txs {
+					delete(m.TXPool, string(tx.ID))
 				}
-				m.TXPool.Unlock()
 			}
 		}
 	}()

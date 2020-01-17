@@ -75,7 +75,7 @@ func (i *Index) Update(block *Block) {
 			}
 		}
 		//update vote and stake
-		i.ExecuteTransaction(&tx, epoch)
+		i.ExecuteTransaction(tx, epoch)
 	}
 	//update count tx
 	for addr, count := range countTx {
